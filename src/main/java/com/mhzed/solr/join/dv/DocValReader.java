@@ -29,6 +29,7 @@ public abstract class DocValReader<T> {
 		else return this.nullVal();
 	}
 
+	// what to return for document that contains no such doc-val field
 	protected T nullVal() { return null; }
 	protected abstract boolean attachDocVal(LeafReaderContext context) throws IOException;
 	protected abstract T read() throws IOException;

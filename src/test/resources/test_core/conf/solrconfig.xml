@@ -1363,7 +1363,7 @@
      <transformer name="qecBooster" class="org.apache.solr.response.transform.EditorialMarkerFactory" />
     -->
     
-<queryParser class="com.mhzed.solr.join.FilterJoinQParserPlugin" name="join">
+<queryParser class="com.mhzed.solr.join.FilterJoinQParserPlugin" name="fjoin">
 </queryParser>
     
 </config>

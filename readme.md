@@ -1,5 +1,11 @@
 # Solr Filter Join
 
+TODO:
+1. add post filter cache. Done
+2. multipe join sets
+
+    
+
 This project adds support for SQL-esque "Equi Join" query to SOLR via solr.FilterQuery or solr.PostFilter.
 
 Sometime a client may want to search with fields that are spread over more than one Solr collections.  For example:

@@ -6,12 +6,11 @@ import java.util.stream.Collectors;
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.LongPoint;
-import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.util.BytesRef;
-import org.apache.solr.query.FilterQuery;
 import org.apache.solr.schema.FieldType;
+import org.apache.solr.search.DelegatingCollector;
 
 import com.mhzed.solr.join.dv.DocValReader;
 import com.mhzed.solr.join.dv.DoubleDocValReader;
@@ -44,8 +43,10 @@ public class FilterQueryFactory {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public static Query createSetQuery(String field, CompatibleDataType type, Set<?> set) {
+	public static Query createSetQuery(String field, FieldType ft, Set<?> set) {
 		Query q = null;
+		CompatibleDataType type = parseType(ft); 
+		typeCheck(set.iterator().next(), type);
 		switch (type) {
 			case Int:	
 				q = IntPoint.newSetQuery(field, (Set<Integer>)set);
@@ -78,23 +79,12 @@ public class FilterQueryFactory {
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Query createQuery(
-					String field, FieldType fieldType, Set<?> set,
-					int postFilterSizeCutoff) {
-		if (set.size() == 0) {
-			return new MatchNoDocsQuery();
-		}
+	public static DelegatingCollector createCollecor(
+					String field, FieldType fieldType, Set<?> set) {
+		if (set.size() == 0) return null;
 		CompatibleDataType fieldDataType = parseType(fieldType);
 		typeCheck(set.iterator().next(), fieldDataType);
-
-		if (set.size() < postFilterSizeCutoff) {
-			// return a FilterQuery to fully take advantage of default solr filter query cache
-			return new FilterQuery(FilterQueryFactory.createSetQuery(field, fieldDataType, set));
-		}
-		else {
-			return new PostFilterQuery(
-							new PostFilterCollector(getDocValReader(field, fieldDataType), set));
-		}
+		return new PostFilterCollector(getDocValReader(field, fieldDataType), set);
 	}
-	
+		
 }
