@@ -1,5 +1,6 @@
-package com.mhzed.solr.join;
+package com.mhzed.solr.disjoin;
 
+import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.search.Query;
@@ -13,12 +14,10 @@ import org.apache.solr.search.SyntaxError;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
-
-
-public final class FilterJoinQParserPlugin extends QParserPlugin {
+public final class DisJoinQParserPlugin extends QParserPlugin {
 
 	public final static String DefaultCacheSpec = "expireAfterAccess=10m,maximumSize=1000";
-	private Cache<FilterJoinQuery, Set<Object>> postFilterCache;
+	private Cache<DisJoinQuery, List<Set<?>>> postFilterCache;
 	
   @SuppressWarnings("rawtypes")
 	@Override
@@ -32,7 +31,7 @@ public final class FilterJoinQParserPlugin extends QParserPlugin {
 		return new QParser(qstr, localParams, params, req) {
 			@Override
 			public Query parse() throws SyntaxError {
-				return new FilterJoinQuery(qstr, localParams, params, req, postFilterCache);
+				return new DisJoinQuery(qstr, localParams, params, req, postFilterCache, this);
 			}
 		};				
 	}	

@@ -1,4 +1,4 @@
-package com.mhzed.solr.join;
+package com.mhzed.solr.disjoin;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -10,21 +10,21 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.FieldType;
-import org.apache.solr.search.DelegatingCollector;
 
-import com.mhzed.solr.join.dv.DocValReader;
-import com.mhzed.solr.join.dv.DoubleDocValReader;
-import com.mhzed.solr.join.dv.LongDocValReader;
-import com.mhzed.solr.join.dv.StringDocValReader;
+import com.mhzed.solr.disjoin.dv.DocValReader;
+import com.mhzed.solr.disjoin.dv.DoubleDocValReader;
+import com.mhzed.solr.disjoin.dv.IntDocValReader;
+import com.mhzed.solr.disjoin.dv.LongDocValReader;
+import com.mhzed.solr.disjoin.dv.StringDocValReader;
 
-public class FilterQueryFactory {
+public class DisJoinQueryUtil {
 	
 	// supported data types to be joined on 
-	private enum CompatibleDataType {
+	public enum CompatibleDataType {
 		Int, Long, Str, Double
 	};
 	
-	private static CompatibleDataType parseType(FieldType ft) {
+	public static CompatibleDataType parseType(FieldType ft) {
 		if (ft.getClassArg().contains("IntPointField")) return CompatibleDataType.Int;
 		else if (ft.getClassArg().contains("LongPointField")) return CompatibleDataType.Long;
 		else if (ft.getClassArg().contains("DoublePointField")) return CompatibleDataType.Double;
@@ -34,7 +34,7 @@ public class FilterQueryFactory {
 	
 	public static DocValReader<?> getDocValReader(String fieldName, CompatibleDataType type) {
 		switch (type) {
-			case Int:	return new LongDocValReader(fieldName);
+			case Int:	return new IntDocValReader(fieldName);
 			case Long: return new LongDocValReader(fieldName);
 			case Str: return new StringDocValReader(fieldName);
 			case Double: return new DoubleDocValReader(fieldName);
@@ -77,14 +77,5 @@ public class FilterQueryFactory {
 		}
 		throw new ClassCastException("type " + type.name() + " is not compatible with " + e.getClass().getName());
 	}
-	
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static DelegatingCollector createCollecor(
-					String field, FieldType fieldType, Set<?> set) {
-		if (set.size() == 0) return null;
-		CompatibleDataType fieldDataType = parseType(fieldType);
-		typeCheck(set.iterator().next(), fieldDataType);
-		return new PostFilterCollector(getDocValReader(field, fieldDataType), set);
-	}
-		
+			
 }

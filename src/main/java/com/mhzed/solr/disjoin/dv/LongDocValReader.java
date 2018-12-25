@@ -1,4 +1,4 @@
-package com.mhzed.solr.join.dv;
+package com.mhzed.solr.disjoin.dv;
 
 import java.io.IOException;
 
@@ -6,13 +6,13 @@ import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
 
 /**
- * For reading a numeric DocVal as double.  This applies to solr.FloatPointField, or 
- * solr.DoublePointField 
+ * For reading a numeric DocVal as Long integer.  This applies to 
+ * solr.LongPointField 
  * 
  */
-public class DoubleDocValReader extends DocValReader<Double>{
+public class LongDocValReader extends DocValReader<Long>{
 	NumericDocValues docvals;
-	public DoubleDocValReader(String field) {
+	public LongDocValReader(String field) {
 		super(field);
 	}
 	@Override
@@ -21,8 +21,8 @@ public class DoubleDocValReader extends DocValReader<Double>{
 		return this.docvals != null;
 	}
 	@Override
-	protected Double read() throws IOException {
-		return Double.longBitsToDouble(docvals.longValue());
+	protected Long read() throws IOException {
+		return docvals.longValue();
 	}
 	@Override
 	protected int advance(int target) throws IOException {

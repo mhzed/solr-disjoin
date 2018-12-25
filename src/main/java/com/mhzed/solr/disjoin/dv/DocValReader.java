@@ -1,4 +1,4 @@
-package com.mhzed.solr.join.dv;
+package com.mhzed.solr.disjoin.dv;
 
 import java.io.IOException;
 

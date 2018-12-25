@@ -1,4 +1,4 @@
-package com.mhzed.solr.join;
+package com.mhzed.solr.disjoin;
 
 import org.apache.solr.common.util.NamedList;
 

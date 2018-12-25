@@ -4,11 +4,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.mhzed</groupId>
-	<artifactId>solr-filter-join</artifactId>
+	<artifactId>solr-disjoin</artifactId>
 	<version>${revision}</version>
 	<packaging>jar</packaging>
 
-	<name>solr-filter-join</name>
+	<name>solr-disjoin</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
