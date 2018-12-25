@@ -66,11 +66,11 @@ class JoinQstr {
   static final String regFields = "[\\pL\\pN_,]+";
   // legal collection name regex: see SolrIdentifierValidator.identifierPattern
   static final String regCol = "(?!\\-)[\\._A-Za-z0-9\\-]+";
-  static final Pattern p = Pattern
+  static final Pattern vPattern = Pattern
       .compile(String.format("^(?:(%s)\\.)?(%s)\\|(%s)\\|(.*)$", regCol, regField, regFields));
 
   public static JoinQstr parse(String v) throws SyntaxError {
-    Matcher m = p.matcher(v);
+    Matcher m = vPattern.matcher(v);
     if (m.find()) {
       return new JoinQstr(m.group(1), m.group(2), Arrays.asList(m.group(3).split(",")), m.group(4), null, 0, null, null);
     } else {
@@ -83,7 +83,7 @@ class JoinQstr {
     List<FieldType> toTypes = r.toFields.stream().map(f->req.getSchema().getField(f).getType())
         .distinct().collect(Collectors.toList());
     if (toTypes.size() > 1) {
-      throw new IllegalArgumentException(String.format("Join toField types are not the same: %s.%s",
+      throw new IllegalArgumentException(String.format("Join toField types are not of the same type: %s.%s",
         r.fromIndex, r.toFields.stream().collect(Collectors.joining(","))
       ));
     }

@@ -7,6 +7,7 @@ import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.search.Query;
+import org.apache.lucene.search.MatchNoDocsQuery;
 import org.apache.lucene.search.TermInSetQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.FieldType;
@@ -44,7 +45,8 @@ public class DisJoinQueryUtil {
 	
 	@SuppressWarnings("unchecked")
 	public static Query createSetQuery(String field, FieldType ft, Set<?> set) {
-		Query q = null;
+    Query q = null;
+    if (set.size() == 0) return new MatchNoDocsQuery();
 		CompatibleDataType type = parseType(ft); 
 		typeCheck(set.iterator().next(), type);
 		switch (type) {

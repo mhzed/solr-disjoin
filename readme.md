@@ -1,31 +1,32 @@
-# Solr Filter Join
+# Solr DisJoin
 
-TODO:
-1. add post filter cache. Done
-2. multipe join sets
+DisJoin stands for disjunction join.
 
-    
+Solr supports a limited form of [join](https://wiki.apache.org/solr/Join), equivalent to RDMBS inner-join on a single field.  Though limited, Join query can be very useful in certain contexts []().  
 
-This project adds support for SQL-esque "Equi Join" query to SOLR via solr.FilterQuery or solr.PostFilter.
-
-Sometime a client may want to search with fields that are spread over more than one Solr collections.  For example:
-
-1. Search on collection 1, return a set of values
-2. Search on collection 2, filter the results by checking if a result is included in the set of values returned by 1.
-
-Doing 1+2 in the client is in-efficient, needless to say.  This project provides a solr.QParserPlugin that performs the join in the Solr JVM using the most efficient mechanisms possible:  solr.FilterQuery, or solr.PostFilter (if the join set is large).
+Multiple join queries can be combined together by adding each as a filter query to the main Solr Query.  The join conditions together form a logical conjunction due to the nature of filter query.  However sometimes a disjunction of join conditions are desired.  This DisJoin query plugin fills this requirement.  The examples below illustrate some use cases for disjunction join.
 
 ## Pre-requisites and limitations
 
-1. The only join condition supported and assumed is single field equality.
-2. The joined field MUST be configured as 'docValues="true"' in schema.  
+1. Tested on Solr 7.4
+2. The joined fields MUST be configured as 'docValues="true"' in schema.  
+3. Current supported field types are: 
+   - IntPointField
+   - LongPointField
+   - DoublePointField
+   - StrField
 
-## Setup
+## Configuration and usage
 
-In solrconfig.xml, add
+In SolrConfig.xml, add:
 
-## Search
+    <queryParser class="com.mhzed.solr.disjoin.DisJoinQParserPlugin" name="disjoin">
+    </queryParser>
 
+Then construct following solr query:
+
+    // in Java:
+    new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz}");
 
 ## Example:
 
@@ -49,15 +50,6 @@ In collection "files", these objects are stored:
     }
 
 
-
-
-
 Typically, an application that uses Solr should embed all search-able fields in the document.  Searching is  
 
-
-Typical usage:
-{!join collection=folders query=path:/a/b/c on=id:folder_id}
-
-
-
-The 
+    {!disjoin v=folders.id|folder_id|path:"/a"}

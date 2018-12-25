@@ -63,7 +63,7 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
     return s.stream().reduce(0, (a,b)->a+b.size(), (a,b)->a+b);
   }
 	private boolean isPostFilter() {
-    return size(joinVals.get()) >= this.postFilterSize;
+    return joinVals == null ? false : size(joinVals.get()) >= this.postFilterSize;
 	}
   
   /**
@@ -149,12 +149,14 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
     List<Set<?>> sets = new ArrayList<Set<?>>();
     for (int i=0; i<this.joinQueries.size(); i++) {
       JoinQstr jq = this.joinQueries.get(i);
+      Set<?> set = this.joinVals.get().get(i);
       DisJoinQueryUtil.CompatibleDataType t = DisJoinQueryUtil.parseType(jq.toFieldType);
-      DisJoinQueryUtil.typeCheck(this.joinVals.get().get(i).iterator().next(), t);  // ensure type compatibility
-
+      if (set.size() > 0) {
+        DisJoinQueryUtil.typeCheck(set.iterator().next(), t);  // ensure type compatibility
+      }
       for (int j=0; j<jq.toFields.size(); j++) {
         readers.add(DisJoinQueryUtil.getDocValReader(jq.toFields.get(j), t));
-        sets.add(this.joinVals.get().get(i));
+        sets.add(set);
       }
     }
 		DelegatingCollector ret = new PostFilterCollector<DocValReader<?>>(readers, sets);
@@ -170,9 +172,9 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
     BooleanQuery.Builder b = new BooleanQuery.Builder();
     for (int i=0; i<this.joinQueries.size(); i++) {
       JoinQstr jq = this.joinQueries.get(i);
+      Set<?> set = this.joinVals.get().get(i);
       for (int j=0; j<jq.toFields.size(); j++) {
-        b.add(DisJoinQueryUtil.createSetQuery(jq.toFields.get(j), jq.toFieldType, joinVals.get().get(i)),
-          Occur.SHOULD);
+        b.add(DisJoinQueryUtil.createSetQuery(jq.toFields.get(j), jq.toFieldType, set), Occur.SHOULD);
       }
     }
     Query q = b.build();

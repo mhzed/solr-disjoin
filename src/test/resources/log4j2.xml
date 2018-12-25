@@ -1,0 +1,23 @@
+<Configuration>
+  <Appenders>
+    <Console name="Console">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+      <filters>
+        <ScriptFilter onMatch="DENY" onMisMatch="ACCEPT">
+          <Script name="JavascriptFilter" language="JavaScript">
+            <![CDATA[
+            // print() instead of console.log()
+            var msg = logEvent.getMessage().getFormattedMessage();
+            msg.indexOf("are not of the same type") != -1;
+            ]]>
+          </Script>
+        </ScriptFilter>
+      </filters>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Root level="error">
+      <AppenderRef ref="Console" />
+    </Root>
+  </Loggers>
+</Configuration>
