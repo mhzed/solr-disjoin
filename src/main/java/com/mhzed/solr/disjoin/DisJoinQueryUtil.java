@@ -38,8 +38,8 @@ public class DisJoinQueryUtil {
 			case Int:	return new IntDocValReader(fieldName);
 			case Long: return new LongDocValReader(fieldName);
 			case Str: return new StringDocValReader(fieldName);
-			case Double: return new DoubleDocValReader(fieldName);
-			default: return null;
+      default:  // case Double: 
+        return new DoubleDocValReader(fieldName);
 		}
 	}
 	

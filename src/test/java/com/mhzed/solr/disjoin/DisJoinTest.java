@@ -18,7 +18,6 @@ import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.cloud.SolrCloudTestCase;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.search.SyntaxError;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,7 +35,9 @@ public class DisJoinTest extends SolrCloudTestCase {
 	static final String PathField = "path_descendent_path";
 	static final String IdField = "id";	// for test join by string
 	static final String IntField = "id_i";	// for test join by integer
-	static final String LongField = "id_l";	// for test join by long
+  static final String LongField = "id_l";	// for test join by long
+  static final String DoubleField = "id_d";	// for test join by double
+  static final String TextField = "id_t"; // for unsuported type test 
 	static final String ParentField = "parent_id_s";
 	static {
 		System.setProperty("java.security.egd", "file:/dev/./urandom");		
@@ -60,6 +61,21 @@ public class DisJoinTest extends SolrCloudTestCase {
     CollectionAdminRequest.createCollection(
       SingleDocFolderCollection, "_default", 1, NodeCount).process(client);
   
+    List<SolrInputDocument> folders = branch("", null, 0, 3, 3);	// size: 3^1 + 3^2 + 3^3 = 39
+    new UpdateRequest().add(folders).process(client, FolderCollection);
+    client.commit(FolderCollection);
+
+    List<SolrInputDocument> folderdocs = docs(folders);
+    ArrayList<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
+    docs.addAll(randDocs(11));
+    docs.addAll(folderdocs);
+    docs.addAll(randDocs(7));
+    new UpdateRequest().add(docs).process(client, DocCollection);
+    client.commit(DocCollection);
+
+    new UpdateRequest().add(folders).process(client, SingleDocFolderCollection);
+    new UpdateRequest().add(docs(folders)).process(client, SingleDocFolderCollection);
+    client.commit(SingleDocFolderCollection);      
 	}
   @AfterClass
   public static void teardown() throws Exception {
@@ -75,43 +91,9 @@ public class DisJoinTest extends SolrCloudTestCase {
   	return !isFilter(debugMap) && !isPostFilter(debugMap);
   }
 
-  @Test
-  public void testQstrParser() throws SyntaxError {
-    JoinQstr p1 = JoinQstr.parse("id|toid|path:abc");
-    assertEquals(p1.fromIndex, null);
-    assertEquals(p1.fromField, "id");
-    assertEquals(p1.toFields.get(0), "toid");
-    assertEquals(p1.query, "path:abc");
-    
-    JoinQstr p2 = JoinQstr.parse("folders.id|toid|path:abc");
-    assertEquals(p2.fromIndex, "folders");
-    assertEquals(p2.fromField, "id");
-    assertEquals(p2.toFields.get(0), "toid");
-    assertEquals(p2.query, "path:abc");
-
-    JoinQstr p3 = JoinQstr.parse("fol.ders.id|toid,id2|path:abc");
-    assertEquals(p3.fromIndex, "fol.ders");
-    assertEquals(p3.fromField, "id");
-    assertEquals(p3.toFields.get(0), "toid");
-    assertEquals(p3.toFields.get(1), "id2");
-    assertEquals(p3.query, "path:abc"); 
-  }
-  @Test(expected = SyntaxError.class)
-  public void testQstrParserError() throws SyntaxError {
-    JoinQstr.parse("fol.ders.id|toid");
-  }
 
 	@Test
 	public void test() throws Exception {
-		List<SolrInputDocument> folders = branch("", null, 0, 3, 3);	// size: 3^1 + 3^2 + 3^3 = 39
-    new UpdateRequest().add(folders).process(client, FolderCollection);
-    client.commit(FolderCollection);
-		new UpdateRequest().add(docs(folders)).process(client, DocCollection);
-    client.commit(DocCollection);
-    new UpdateRequest().add(folders).process(client, SingleDocFolderCollection);
-    new UpdateRequest().add(docs(folders)).process(client, SingleDocFolderCollection);
-    client.commit(SingleDocFolderCollection);
-  
     testWithCacheInspection();
     testJoinWithNone(false);
     testJoinWithNone(true);
@@ -177,18 +159,18 @@ public class DisJoinTest extends SolrCloudTestCase {
   }
   private void testDisjoin(boolean postFilter) throws SolrServerException, IOException {
     QueryResponse r;
-    r = client.query(DocCollection, disJoin("*:*", new String[]{
+    r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1/0", "id", "folder_id_s"),
       pathQuery("/2/0", "id_i", "folder_id_i"),
-      pathQuery("/0/0", "id_l", "folder_id_l")
+      pathQuery("/0/0", "id_d", "folder_id_d")
     }, postFilter));
     assertEquals(12, r.getResults().size());
-    r = client.query(DocCollection, disJoin("*:*", new String[]{
+    r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1/0", "id", "folder_id_s"),
       pathQuery("/2/0", "id", "folder_id_s")
     }, postFilter));
     assertEquals(8, r.getResults().size());
-    r = client.query(DocCollection, disJoin("*:*", new String[]{
+    r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1", "id_l", "folder_id_l"),
       graphQuery("0")
     }, postFilter));
@@ -206,11 +188,25 @@ public class DisJoinTest extends SolrCloudTestCase {
 
   }
   @Test(expected = SolrServerException.class)
-  public void testToTypeError() throws SolrServerException, IOException {
+  public void testToTypesNotSameError() throws SolrServerException, IOException {
     client.query(DocCollection, disJoin("*:*", new String[]{
       pathQuery("/0/1", "id_l", "folder_id_l,link_folder_id_s")
     }, false));
   }
+  @Test(expected = SolrServerException.class)
+  public void testJoinTypeNoMatchError() throws SolrServerException, IOException {
+    client.query(DocCollection, disJoin("*:*", new String[]{
+      pathQuery("/0/1", "id", "folder_id_i")
+    }, false));
+  }
+  @Test(expected = SolrServerException.class)
+  public void testJoinTypeUnsupportedError() throws SolrServerException, IOException {
+    client.query(DocCollection, disJoin("*:*", new String[]{
+      pathQuery("/0/1", "id_t", "folder_id_t")
+   
+    }, false));
+  }
+
 
 	SolrQuery disJoin(String mainQuery, String[] joinQueries, boolean postFilter) {
     String qs = IntStream.range(0, joinQueries.length).mapToObj(i->
@@ -242,14 +238,14 @@ public class DisJoinTest extends SolrCloudTestCase {
 		
 	
 	// generate test folder docs
-	List<SolrInputDocument> branch(String path, Integer parentId, int idoffset, int width, int depth) {
+	static List<SolrInputDocument> branch(String path, Integer parentId, int idoffset, int width, int depth) {
 		List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
 		if (depth <= 0) return docs;
 		int id = idoffset;
 		
 		List<Integer> childrenIds = new ArrayList<Integer>();
 		for (int w=0; w<width; w++) {
-			docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, 
+			docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
 							PathField, path + "/" + w, ParentField, parentId, "type_s", "folder"));
 			childrenIds.add(id);
 			id++;
@@ -262,20 +258,27 @@ public class DisJoinTest extends SolrCloudTestCase {
 		return docs;
 	}
 	// generate 1 doc for each folder 
-	List<SolrInputDocument> docs(List<SolrInputDocument> folders) {
+	static List<SolrInputDocument> docs(List<SolrInputDocument> folders) {
     
 		return folders.stream().map(folder-> {
       Integer id = (Integer)folder.getFieldValue(IntField);
 			return docOf("folder_" + IdField + "_s", String.valueOf(id), 
 							"folder_" + IntField, id,
               "folder_" + LongField, Long.valueOf(id),
+              "folder_" + DoubleField, Double.valueOf(id),
+              "folder_" + TextField, id,
               "link_folder_" + IdField + "_s", String.valueOf(id+1), 
 							"link_folder_" + IntField, id+1,
               "link_folder_" + LongField, Long.valueOf(id+1),
               "type_s", "doc" );
     }).collect(Collectors.toList());
 		
-	}
+  }
+  static List<SolrInputDocument> randDocs(int n) {
+    return IntStream.range(0, n).mapToObj(i->
+      docOf("random_d", Math.random(), "random_t", Math.random())
+    ).collect(Collectors.toList());
+  }
 	
 	public static SolrInputDocument docOf(Object... args) {
 		SolrInputDocument doc = new SolrInputDocument();

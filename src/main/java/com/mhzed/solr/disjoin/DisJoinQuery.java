@@ -91,12 +91,12 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
 		// setup lazy-eval
 		joinVals = Suppliers.memoize(()->{
 			// post filter is not cached by solr's filter cache, thus cache results in postFilterCache.
-			List<Set<?>> joinVals = postFilterCache.getIfPresent(this);
-			if (joinVals == null) {
-        joinVals = this.joinQueries.stream().map(q->q.exec()).collect(Collectors.toList());
-				if (size(joinVals) >= postFilterSize) postFilterCache.put(this,  joinVals);
+			List<Set<?>> vals = postFilterCache.getIfPresent(this);
+			if (vals == null) {
+        vals = this.joinQueries.stream().map(q->q.exec()).collect(Collectors.toList());
+				if (size(vals) >= postFilterSize) postFilterCache.put(this,  vals);
 			}
-			return joinVals;
+			return vals;
 		});
 		
 		// get response builder for add debug response
@@ -104,7 +104,6 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
     if (info != null) {
     	_rb = info.getResponseBuilder();
     }
-
 	}
 	
 	@Override

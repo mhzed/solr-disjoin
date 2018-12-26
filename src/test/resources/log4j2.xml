@@ -8,7 +8,11 @@
             <![CDATA[
             // print() instead of console.log()
             var msg = logEvent.getMessage().getFormattedMessage();
-            msg.indexOf("are not of the same type") != -1;
+            false
+            || msg.indexOf("are not of the same type") != -1 
+            || msg.indexOf("is not compatible with") != -1 
+            || msg.indexOf("Uppported field type") != -1 
+            ;
             ]]>
           </Script>
         </ScriptFilter>
