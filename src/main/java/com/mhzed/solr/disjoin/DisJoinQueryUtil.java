@@ -13,10 +13,10 @@ import org.apache.lucene.util.BytesRef;
 import org.apache.solr.schema.FieldType;
 
 import com.mhzed.solr.disjoin.dv.DocValReader;
-import com.mhzed.solr.disjoin.dv.DoubleDocValReader;
-import com.mhzed.solr.disjoin.dv.IntDocValReader;
-import com.mhzed.solr.disjoin.dv.LongDocValReader;
+import com.mhzed.solr.disjoin.dv.NumberDocVal;
+import com.mhzed.solr.disjoin.dv.NumbersDocVal;
 import com.mhzed.solr.disjoin.dv.StringDocValReader;
+import com.mhzed.solr.disjoin.dv.StringsDocValReader;
 
 public class DisJoinQueryUtil {
 	
@@ -33,13 +33,14 @@ public class DisJoinQueryUtil {
 		else throw new RuntimeException("Uppported field type " + ft.getTypeName());
 	}
 	
-	public static DocValReader<?> getDocValReader(String fieldName, CompatibleDataType type) {
-		switch (type) {
-			case Int:	return new IntDocValReader(fieldName);
-			case Long: return new LongDocValReader(fieldName);
-			case Str: return new StringDocValReader(fieldName);
+	public static DocValReader<?> getDocValReader(String fieldName, FieldType ft) {
+    
+		switch (parseType(ft)) {
+			case Int:	return ft.isMultiValued() ? NumbersDocVal.intReader(fieldName) : NumberDocVal.intReader(fieldName);
+			case Long: return ft.isMultiValued() ? NumbersDocVal.longReader(fieldName) : NumberDocVal.longReader(fieldName);
+			case Str: return ft.isMultiValued() ? new StringsDocValReader(fieldName) : new StringDocValReader(fieldName);
       default:  // case Double: 
-        return new DoubleDocValReader(fieldName);
+        return ft.isMultiValued() ? NumbersDocVal.doubleReader(fieldName) : NumberDocVal.doubleReader(fieldName);
 		}
 	}
 	

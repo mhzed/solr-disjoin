@@ -27,7 +27,9 @@ public class DvSetCollector<T> extends SimpleCollector {
   }
   @Override
   public void collect(int doc) throws IOException {
-    results.add(dvr.next(doc));
+    for (T n: dvr.next(doc)) {
+      results.add(n);
+    }
   }
 
 }

@@ -34,17 +34,17 @@ import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
 
 /**
- * DisJoinQuery could behave as a normal Query or as a PostFilter, depending
- * on the size of join.
- * If in PostFilter mode, then the join set values are cached in postFilterCache
- * configured in DisJoinQParserPlugin.  Otherwise, postFilterCache is not used since
- * the target collection's filter cache is used and is more effective.
- * By default the PostFilter mode kicks in when the join set size exceeds 10000, this value
- * can be overridden by query local parameter 'pfsz'.
+ * DisJoinQuery could behave as a normal Query or as a PostFilter, depending on
+ * the size of join. If in PostFilter mode, then the join set values are cached
+ * in postFilterCache configured in DisJoinQParserPlugin. Otherwise,
+ * postFilterCache is not used since the target collection's filter cache is
+ * used and is more effective. By default the PostFilter mode kicks in when the
+ * join set size exceeds 10000, this value can be overridden by query local
+ * parameter 'pfsz'.
  *
- * To pass in multiple queries, use additional parameters v1, v2, etc.... 
- * For example:
- *      {!djoin v=fromindex.id|folder_id|path:abc v1=id2|id2|content:blah ...} 
+ * To pass in multiple queries, use additional parameters v1, v2, etc.... For
+ * example: {!djoin v=fromindex.id|folder_id|path:abc v1=id2|id2|content:blah
+ * ...}
  * 
  */
 public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter {
@@ -60,119 +60,122 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
   private ResponseBuilder _rb; // for sending back debug info
 
   private int size(List<Set<?>> s) {
-    return s.stream().reduce(0, (a,b)->a+b.size(), (a,b)->a+b);
+    return s.stream().reduce(0, (a, b) -> a + b.size(), (a, b) -> a + b);
   }
-	private boolean isPostFilter() {
+
+  private boolean isPostFilter() {
     return joinVals == null ? false : size(joinVals.get()) >= this.postFilterSize;
-	}
-  
+  }
+
   /**
    * postFilterCache: is used to cache query results fetched from fromIndex
    */
-	public DisJoinQuery(String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req,
-					Cache<DisJoinQuery, List<Set<?>>> postFilterCache, QParser qParser
-					) throws SyntaxError {
+  public DisJoinQuery(String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req,
+      Cache<DisJoinQuery, List<Set<?>>> postFilterCache, QParser qParser) throws SyntaxError {
     this.joinQueries = new ArrayList<JoinQstr>();
-    for (int i=0; true; i++) {
+    for (int i = 0; true; i++) {
       String query;
-      if (i==0) {
-        if (localParams.get("v") != null) query = localParams.get("v");
-        else query = qstr;
-      } else {    // v1, v2, v3, ...
+      if (i == 0) {
+        query = qstr; // v
+      } else { // v1, v2, v3, ...
         query = localParams.get("v" + i);
       }
-      if (query == null) break;
+      if (query == null)
+        break;
       this.joinQueries.add(JoinQstr.create(query, req, qParser));
     }
-    
-		String paramPost = localParams.get(ParamPost);		
-		postFilterSize = StringUtils.isEmpty(paramPost) ? DefaultPostFilterSize : Integer.parseInt(paramPost);
- 
-		// setup lazy-eval
-		joinVals = Suppliers.memoize(()->{
-			// post filter is not cached by solr's filter cache, thus cache results in postFilterCache.
-			List<Set<?>> vals = postFilterCache.getIfPresent(this);
-			if (vals == null) {
-        vals = this.joinQueries.stream().map(q->q.exec()).collect(Collectors.toList());
-				if (size(vals) >= postFilterSize) postFilterCache.put(this,  vals);
-			}
-			return vals;
-		});
-		
-		// get response builder for add debug response
+
+    String paramPost = localParams.get(ParamPost);
+    postFilterSize = StringUtils.isEmpty(paramPost) ? DefaultPostFilterSize : Integer.parseInt(paramPost);
+
+    // setup lazy-eval
+    joinVals = Suppliers.memoize(() -> {
+      // post filter is not cached by solr's filter cache, thus cache results in
+      // postFilterCache.
+      List<Set<?>> vals = postFilterCache.getIfPresent(this);
+      if (vals == null) {
+        vals = this.joinQueries.stream().map(q -> q.exec()).collect(Collectors.toList());
+        if (size(vals) >= postFilterSize)
+          postFilterCache.put(this, vals);
+      }
+      return vals;
+    });
+
+    // get response builder for add debug response
     SolrRequestInfo info = SolrRequestInfo.getRequestInfo();
     if (info != null) {
-    	_rb = info.getResponseBuilder();
+      _rb = info.getResponseBuilder();
     }
-	}
-	
-	@Override
-	public int getCost() {
-		return this.isPostFilter() ? 100 : 50;
-	}
-	
-	// if to store in filter query cache.  query result cache is un-affected by this value.
-	@Override
-	public boolean getCache() {
-		return this.isPostFilter() ? false : true;
-	}		
-	
-	@Override
-	public boolean equals(Object obj) {
-		if (!sameClassAs(obj)) return false;
-		DisJoinQuery other = getClass().cast(obj);
-    return this.joinQueries.equals(other.joinQueries);
-	}
+  }
 
-	@Override
-	public int hashCode() {
+  @Override
+  public int getCost() {
+    return this.isPostFilter() ? 100 : 50;
+  }
+
+  // if to store in filter query cache. query result cache is un-affected by this
+  // value.
+  @Override
+  public boolean getCache() {
+    return this.isPostFilter() ? false : true;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (!sameClassAs(obj)) return false;
+    DisJoinQuery other = getClass().cast(obj);
+    return this.joinQueries.equals(other.joinQueries);
+  }
+
+  @Override
+  public int hashCode() {
     return Objects.hash(classHash(), this.joinQueries);
-	}
-		
-	private void buildDebugResponse(boolean postFilter) {
-		if (_rb != null && _rb.isDebug()) {
+  }
+
+  private void buildDebugResponse(boolean postFilter) {
+    if (_rb != null && _rb.isDebug()) {
       SimpleOrderedMap<Object> dbg = new SimpleOrderedMap<>();
       dbg.add("type", postFilter ? "post-filter" : "filter");
-      dbg.add("fromSetSize",size(joinVals.get()));
+      dbg.add("fromSetSize", size(joinVals.get()));
       _rb.addDebug(dbg, "FilterJoin", toString());
-		}
-		this._rb = null;
-	}
-  
+    }
+    this._rb = null;
+  }
+
   // called when run as postFilter
-	@Override
-	public DelegatingCollector getFilterCollector(IndexSearcher searcher) {
+  @Override
+  public DelegatingCollector getFilterCollector(IndexSearcher searcher) {
     buildDebugResponse(true);
 
-    List<DocValReader<?>> readers = new ArrayList<DocValReader<?>>(); 
+    List<DocValReader<?>> readers = new ArrayList<DocValReader<?>>();
     List<Set<?>> sets = new ArrayList<Set<?>>();
-    for (int i=0; i<this.joinQueries.size(); i++) {
+    for (int i = 0; i < this.joinQueries.size(); i++) {
       JoinQstr jq = this.joinQueries.get(i);
       Set<?> set = this.joinVals.get().get(i);
       DisJoinQueryUtil.CompatibleDataType t = DisJoinQueryUtil.parseType(jq.toFieldType);
       if (set.size() > 0) {
-        DisJoinQueryUtil.typeCheck(set.iterator().next(), t);  // ensure type compatibility
+        DisJoinQueryUtil.typeCheck(set.iterator().next(), t); // ensure type compatibility
       }
-      for (int j=0; j<jq.toFields.size(); j++) {
-        readers.add(DisJoinQueryUtil.getDocValReader(jq.toFields.get(j), t));
+      for (int j = 0; j < jq.toFields.size(); j++) {
+        readers.add(DisJoinQueryUtil.getDocValReader(jq.toFields.get(j), jq.toFieldType));
         sets.add(set);
       }
     }
-		DelegatingCollector ret = new PostFilterCollector<DocValReader<?>>(readers, sets);
-		this.joinVals = null;
-		return ret;
-	}
-  
+    DelegatingCollector ret = new PostFilterCollector<DocValReader<?>>(readers, sets);
+    this.joinVals = null;
+    return ret;
+  }
+
   // called when run as normal query
   @Override
   public Weight createWeight(IndexSearcher searcher, boolean needScores, float boost) throws IOException {
-  	buildDebugResponse(false);
+    buildDebugResponse(false);
 
     BooleanQuery.Builder b = new BooleanQuery.Builder();
-    for (int i=0; i<this.joinQueries.size(); i++) {
+    for (int i = 0; i < this.joinQueries.size(); i++) {
       JoinQstr jq = this.joinQueries.get(i);
       Set<?> set = this.joinVals.get().get(i);
-      for (int j=0; j<jq.toFields.size(); j++) {
+      for (int j = 0; j < jq.toFields.size(); j++) {
         b.add(DisJoinQueryUtil.createSetQuery(jq.toFields.get(j), jq.toFieldType, set), Occur.SHOULD);
       }
     }
@@ -181,13 +184,13 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
     Weight ret;
     if (!(searcher instanceof SolrIndexSearcher)) {
       // delete-by-query won't have SolrIndexSearcher
-    	ret = new ConstantScoreQuery(q).createWeight(searcher, needScores, 1f);
-    } else {		
-	    DocSet docs = ((SolrIndexSearcher)searcher).getDocSet(q);
-	    ret = new SolrConstantScoreQuery(docs.getTopFilter()).createWeight(searcher, needScores, 1f);
+      ret = new ConstantScoreQuery(q).createWeight(searcher, needScores, 1f);
+    } else {
+      DocSet docs = ((SolrIndexSearcher) searcher).getDocSet(q);
+      ret = new SolrConstantScoreQuery(docs.getTopFilter()).createWeight(searcher, needScores, 1f);
     }
     this.joinVals = null;
     return ret;
   }
-	
+
 }

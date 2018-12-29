@@ -28,11 +28,18 @@ public class PostFilterCollector<Reader extends DocValReader<?>> extends Delegat
     for (Reader r: readers) r.setDocVal(context);
 		super.doSetNextReader(context);
 	}
-	
+  
+  private boolean intersects(Set<?> s, Iterable<?> vs) {
+    for (Object v: vs) {
+      if (s.contains(v)) return true;
+    }
+    return false;
+  }
   @Override
   public void collect(int doc) throws IOException {
     for (int i=0; i<sets.size(); i++) {
-      if (sets.get(i).contains(readers.get(i).next(doc))) {
+      Iterable<?> dvs = readers.get(i).next(doc);
+      if (intersects(sets.get(i), dvs)) {
         super.collect(doc);
         break;
       }

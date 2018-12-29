@@ -127,7 +127,7 @@ class JoinQstr {
       fromRef = fromCore.getSearcher(false, true, null);
       SolrIndexSearcher fromSearcher = fromRef.get();
       DocValReader<?> dvr = DisJoinQueryUtil.getDocValReader(fromField,
-          DisJoinQueryUtil.parseType(fromSearcher.getSchema().getField(fromField).getType()));
+          fromSearcher.getSchema().getField(fromField).getType());
       Set<Object> results = new HashSet<Object>();
       fromSearcher.search(this.q, new DvSetCollector(dvr, results));
       return results;

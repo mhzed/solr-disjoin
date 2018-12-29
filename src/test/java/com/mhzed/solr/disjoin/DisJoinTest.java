@@ -68,7 +68,11 @@ public class DisJoinTest extends SolrCloudTestCase {
     List<SolrInputDocument> folderdocs = docs(folders);
     ArrayList<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
     docs.addAll(randDocs(11));
-    docs.addAll(folderdocs);
+    docs.addAll(folderdocs.subList(0, 10));
+    new UpdateRequest().add(docs).process(client, DocCollection);
+    docs.clear();
+    docs.addAll(randDocs(300));
+    docs.addAll(folderdocs.subList(10, folderdocs.size()));
     docs.addAll(randDocs(7));
     new UpdateRequest().add(docs).process(client, DocCollection);
     client.commit(DocCollection);
@@ -95,14 +99,16 @@ public class DisJoinTest extends SolrCloudTestCase {
 	@Test
 	public void test() throws Exception {
     testWithCacheInspection();
-    testJoinWithNone(false);
-    testJoinWithNone(true);
+    
     testGraph(false);
     testGraph(true);
     testDisjoin(false);
     testDisjoin(true);
-
+    testMvJoin();
     testSameCollectionJoin();    
+
+    testJoinWithNone(true);
+    testJoinWithNone(false);
   }
   private void testWithCacheInspection() throws SolrServerException, IOException {
 		QueryResponse r;
@@ -207,12 +213,22 @@ public class DisJoinTest extends SolrCloudTestCase {
     }, false));
   }
 
+  void testMvJoin() throws SolrServerException, IOException {
+    QueryResponse r;
+    r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
+      pathQuery("/1/0", "id_ss", "folder_id_ss"),
+      pathQuery("/2/0", "id_is", "folder_id_is"),
+      pathQuery("/0/0", "id_ls", "folder_id_ls"),
+      pathQuery("/0/2", "id_ds", "folder_id_ds")
+    }, false));
+    assertEquals(16, r.getResults().size());
+  }
 
 	SolrQuery disJoin(String mainQuery, String[] joinQueries, boolean postFilter) {
     String qs = IntStream.range(0, joinQueries.length).mapToObj(i->
       "v" + (i==0?"":i) + "=" + ClientUtils.encodeLocalParamVal(joinQueries[i])).collect(Collectors.joining(" "));
 		return new SolrQuery(mainQuery).addFilterQuery(String.format(
-            "{!djoin %s pfsz=%d}", qs, postFilter ? 0 : (1<<30)            
+            "{!djoin %s pfsz=%d}", qs, postFilter ? -1 : (1<<30)            
 						)).setRows(10000).setShowDebugInfo(true);
 
   }
@@ -245,7 +261,8 @@ public class DisJoinTest extends SolrCloudTestCase {
 		
 		List<Integer> childrenIds = new ArrayList<Integer>();
 		for (int w=0; w<width; w++) {
-			docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
+      docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
+              "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
 							PathField, path + "/" + w, ParentField, parentId, "type_s", "folder"));
 			childrenIds.add(id);
 			id++;
@@ -262,15 +279,20 @@ public class DisJoinTest extends SolrCloudTestCase {
     
 		return folders.stream().map(folder-> {
       Integer id = (Integer)folder.getFieldValue(IntField);
-			return docOf("folder_" + IdField + "_s", String.valueOf(id), 
-							"folder_" + IntField, id,
-              "folder_" + LongField, Long.valueOf(id),
-              "folder_" + DoubleField, Double.valueOf(id),
-              "folder_" + TextField, id,
-              "link_folder_" + IdField + "_s", String.valueOf(id+1), 
-							"link_folder_" + IntField, id+1,
-              "link_folder_" + LongField, Long.valueOf(id+1),
-              "type_s", "doc" );
+			return docOf(
+        "folder_" + IdField + "_s", String.valueOf(id), 
+        "folder_" + IntField, id,
+        "folder_" + LongField, Long.valueOf(id),
+        "folder_" + DoubleField, Double.valueOf(id),
+        "folder_" + TextField, id,
+        "folder_" + IdField + "_ss", String.valueOf(id), 
+        "folder_" + IntField + "s", id,
+        "folder_" + LongField + "s", Long.valueOf(id),
+        "folder_" + DoubleField + "s", Double.valueOf(id),
+        "link_folder_" + IdField + "_s", String.valueOf(id+1), 
+        "link_folder_" + IntField, id+1,
+        "link_folder_" + LongField, Long.valueOf(id+1),
+        "type_s", "doc" );
     }).collect(Collectors.toList());
 		
   }

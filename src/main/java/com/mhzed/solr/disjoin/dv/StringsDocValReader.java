@@ -1,6 +1,8 @@
 package com.mhzed.solr.disjoin.dv;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.SortedSetDocValues;
@@ -20,13 +22,14 @@ public class StringsDocValReader extends DocValReader<String>{
 		return this.docvals != null;
 	}
 	@Override
-	protected String read() throws IOException {
+	protected Iterable<String> read() throws IOException {
     long ord;
+    List<String> r = new ArrayList<String>();
     while ((ord = docvals.nextOrd()) != SortedSetDocValues.NO_MORE_ORDS) {
       final BytesRef term = docvals.lookupOrd(ord);
-      term.utf8ToString();
+      r.add(term.utf8ToString());
     }    
-    return "";
+    return r;
   }
   
   @Override
