@@ -109,6 +109,7 @@ public class DisJoinTest extends SolrCloudTestCase {
 
     testJoinWithNone(true);
     testJoinWithNone(false);
+
   }
   private void testWithCacheInspection() throws SolrServerException, IOException {
 		QueryResponse r;
@@ -212,7 +213,16 @@ public class DisJoinTest extends SolrCloudTestCase {
    
     }, false));
   }
+  // void testDelByQuery() throws SolrServerException, IOException {
+  //   String q = new SolrQuery("*:*").addFilterQuery(String.format("{!djoin}%s",
+  //     pathQuery("/2/2/0", "id_ss", "folder_id_ss"))).toQueryString();
+  //   client.deleteByQuery(DocCollection, q);
+  //   client.commit(DocCollection);
+	// 	QueryResponse r = client.query(DocCollection, disJoin("*:*", new String[]{
+  //     pathQuery("/2/2", "id", "folder_id_s")}, false));
+	// 	assertEquals(3, r.getResults().size());
 
+  // }
   void testMvJoin() throws SolrServerException, IOException {
     QueryResponse r;
     r = client.query(DocCollection, disJoin("type_s:doc", new String[]{

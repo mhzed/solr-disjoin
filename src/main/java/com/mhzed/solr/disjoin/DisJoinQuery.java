@@ -72,6 +72,7 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
    */
   public DisJoinQuery(String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req,
       Cache<DisJoinQuery, List<Set<?>>> postFilterCache, QParser qParser) throws SyntaxError {
+
     this.joinQueries = new ArrayList<JoinQstr>();
     for (int i = 0; true; i++) {
       String query;
@@ -183,7 +184,6 @@ public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter 
 
     Weight ret;
     if (!(searcher instanceof SolrIndexSearcher)) {
-      // delete-by-query won't have SolrIndexSearcher
       ret = new ConstantScoreQuery(q).createWeight(searcher, needScores, 1f);
     } else {
       DocSet docs = ((SolrIndexSearcher) searcher).getDocSet(q);
