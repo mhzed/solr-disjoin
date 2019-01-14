@@ -1,6 +1,7 @@
 .classpath
 .project
 .readme.md.html
+dependency-reduced-pom.xml
 .factorypath
 target/
 .settings/
