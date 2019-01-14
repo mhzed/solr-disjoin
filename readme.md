@@ -25,7 +25,10 @@ The examples below illustrate some use cases for disjunction join.
    value matches.
 5. The join 'fromIndex' should be created as a [colocated collection](https://lucene.apache.org/solr/guide/7_5/colocating-collections.html)
 
-## Configuration and usage
+## Installation and usage
+
+Download jar from [releases](https://github.com/mhzed/solr-disjoin/releases).  
+Place the jar in the correct Solr directory, see [here](https://wiki.apache.org/solr/SolrPlugins).
 
 In SolrConfig.xml, add:
 
