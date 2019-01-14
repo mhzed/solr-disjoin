@@ -1,7 +1,7 @@
 package com.mhzed.solr.disjoin.dv;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
@@ -29,7 +29,7 @@ public abstract class NumberDocVal<T> extends DocValReader<T>{
     return new NumberDocVal<Integer>(field) {
       @Override
       protected Iterable<Integer> read() throws IOException {
-        return Arrays.asList(Long.valueOf(docvals.longValue()).intValue());
+        return Collections.singletonList(Long.valueOf(docvals.longValue()).intValue());
       }
     };
   }
@@ -37,7 +37,7 @@ public abstract class NumberDocVal<T> extends DocValReader<T>{
     return new NumberDocVal<Double>(field) {
       @Override
       protected Iterable<Double> read() throws IOException {
-        return Arrays.asList(Double.longBitsToDouble(docvals.longValue()));
+        return Collections.singletonList(Double.longBitsToDouble(docvals.longValue()));
       }
     };
   }
@@ -45,7 +45,7 @@ public abstract class NumberDocVal<T> extends DocValReader<T>{
     return new NumberDocVal<Long>(field) {
       @Override
       protected Iterable<Long> read() throws IOException {
-        return Arrays.asList(docvals.longValue());
+        return Collections.singletonList(docvals.longValue());
       }
     };
   }
