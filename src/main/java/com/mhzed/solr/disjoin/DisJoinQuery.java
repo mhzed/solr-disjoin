@@ -49,7 +49,7 @@ import org.apache.solr.search.SyntaxError;
  */
 public final class DisJoinQuery extends ExtendedQueryBase implements PostFilter {
   public static final String ParamPost = "pfsz";
-  public static final int DefaultPostFilterSize = 10000;
+  public static final int DefaultPostFilterSize = 100000;
 
   private List<JoinQstr> joinQueries;
   private Supplier<List<Set<?>>> joinVals;

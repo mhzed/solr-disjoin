@@ -2,54 +2,187 @@
 
 DisJoin stands for disjunction join.
 
-Solr supports a limited form of [join](https://wiki.apache.org/solr/Join), equivalent to RDMBS inner-join on a single field.  Though limited, Join query can be very useful in certain contexts []().  
+Solr supports a limited form of [join](https://wiki.apache.org/solr/Join), 
+equivalent to RDMBS inner-join on a single field.  Though limited, Join query 
+can be very useful in certain contexts []().  
 
-Multiple join queries can be combined together by adding each as a filter query to the main Solr Query.  The join conditions together form a logical conjunction due to the nature of filter query.  However sometimes a disjunction of join conditions are desired.  This DisJoin query plugin fills this requirement.  The examples below illustrate some use cases for disjunction join.
+Multiple join queries can be combined together by adding each as a filter query 
+to the main Solr Query.  The join conditions together form a logical conjunction 
+due to the nature of filter query.  However sometimes a disjunction of join 
+conditions are desired.  This DisJoin query plugin fills this requirement.  
+The examples below illustrate some use cases for disjunction join.
 
 ## Pre-requisites and limitations
 
-1. Tested on Solr 7.4
+1. Tested on Solr 7.4+
 2. The joined fields MUST be configured as 'docValues="true"' in schema.  
-3. Current supported field types are: 
+3. Currently the supported field types are: 
    - IntPointField
    - LongPointField
    - DoublePointField
    - StrField
+4. For multi-valued field, the join condition is set-intersect: any one of the
+   value matches.
+5. The join 'fromIndex' should be created as a [colocated collection](https://lucene.apache.org/solr/guide/7_5/colocating-collections.html)
 
 ## Configuration and usage
 
 In SolrConfig.xml, add:
 
-    <queryParser class="com.mhzed.solr.disjoin.DisJoinQParserPlugin" name="disjoin">
-    </queryParser>
+```xml
+<queryParser class="com.mhzed.solr.disjoin.DisJoinQParserPlugin" name="disjoin">
+</queryParser>
+```
 
-Then construct following solr query:
+Then construct the following solr query to search:
 
-    // in Java:
-    new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz}");
+```java
+// one join condition, same as solr built-in join
+new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz}");
 
+// the disjunction of two join conditions.
+new SolrQuery("*:*").addFilterQuery(
+   "{!disjoin v=fromIndex.id|to_id|title:xyz v1=col2.id|to2_id|name:joe}");
+```
+
+### Query format
+
+Multiple join queries are passed in via local parameters "v,v1,v2,...". Make 
+sure the index after 'v' is consecutive: i.e. for "v,v1,v3", v3 is dropped. 
+
+When there is exactly one join condition ("v" only), disjoin behaves the same as solr's 
+join query. 
+
+The format of each join query is:
+```
+(fromCollection.)fromField|toField(,toField)|query
+```
+
+* fromCollection: the join from collection name.  If omitted, then it's the same
+  as the "to" collection (the collection where this query is being run).  
+* fromField: the field in from collection to join on.
+* toField: the field in "to" collection to join on.  When there are multiple 
+  toFields, then each is joined with 'fromField' and results are combined via
+  disjunction.  See example below.
+* query: the query to run on fromCollection to collect "fromField" results.
+
+
+### Post filter
+
+Disjoin supports the post filter mode.  If the join set is large (i.e. larger than
+tens of thousands, or even millions), then it may be advantageous to run Disjoin
+as a post filter on the target collection, instead of turning the join set into 
+Lucene's set query (i.e. lucene.TermInSetQuery).  (TODO: performance test to validate
+this thesis).
+
+By default, Disjoin kicks into post filter mode if the combined join set size 
+exceeds 100000.  Client can change this behavior by passing in a local parameter
+"pfsz" at query time.  For example:
+```java
+// always run in post filter mode
+new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz} pfsz=0");
+// run in post filter mode if join set size exceeds 10 million
+new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz} pfsz=10000000");
+```
+
+ 
 ## Example:
 
-Imagine a use case where SOLR is setup to index a file system, where the directory structure is indexed separately from the files to prevent costly re-index of files when the directory structure changes.
+In this example there are three collections:  the main "files" collection with N
+shards, and "folders" and "types" collection with 1 shard (created via 
+colocated collection](https://lucene.apache.org/solr/guide/7_5/colocating-collections.html)).
+Collection "folder" store a directory structure.  Each file is placed under one folder, but
+could also be linked to multiple other parent folders.  Collection "types" stores a 
+file type hierarchy linked together via "parent_id".  Each file is associated with one type.
 
-In collection "folders", these folder objects are stored:
-
-    {
-      "id"   : "1",
-      "path" : "/a/b/c"
-    }
-
+Collection "folder" sample data:
+```json
+[
+  {
+    "id"   : "1",
+    "path" : "/a"
+  },
+  {
+    "id"   : "2",
+    "path" : "/x"
+  },
+  {
+    "id"   : "3",
+    "path" : "/a/b"
+  }
+]
+```
 * "path" is configured to be of field type "descendant_path".
 
-In collection "files", these objects are stored:
+Collection "types" sample data:
+```json
+[
+  {
+    "id" : 1",
+    "type" : "root"
+  },
+  {
+    "id" : "2",
+    "type" : "manual",
+    "parent_id": "1"
+  },
+  {
+    "id" : "3",
+    "type" : "user_manual",
+    "parent_id" : "2"
+  },
+  {
+    "id" : "4",
+    "type" : "review",
+    "parent_id" : "1"
+  }
+]
+```
 
-    {
-      "id"  : "UUIDXXX",
-      "folder_id" : "1",
-      "content" : "..."
-    }
+Collection "files" sample data:
+```json
+[
+  {
+    "id"  : "17d0dddc-17a6-11e9-ab14-d663bd873d93",
+    "folder_id" : "1",
+    "linked_folder_ids" : ["2", "3"],
+    "type_id" : "1",
+    "content" : "..."
+  },
+  {
+    "id"  : "17d0dddc-17a6-11e9-ab14-d663bd873d94",
+    "folder_id" : "2",
+    "linked_folder_ids" : ["3"],
+    "type_id" : "2",
+    "content" : "..."
+  }
+]
+```
+
+Using Solr's built-in join query, these queries are possible:
+
+```java 
+// find all files with folder_id of folder "/a"
+new SolrQuery("*:*").addFilterQuery("{!join fromIndex=folders from=id to=folder_id}path:\\/a");
+
+// find all files with folder_id of folder "/a" or "/x"
+new SolrQuery("*:*").addFilterQuery("{!join fromIndex=folders from=id to=folder_id}path:\\/a OR path:\\/x");
+
+// find all files of type "manual"
+new SolrQuery("*:*").addFilterQuery("{!join fromIndex=types from=id to=type_id}{!graph from=parent_id to=id}type:manual");
+```
+
+The following queries are not possible with "join", but work with "disjoin": 
+
+```java
+// find all files with folder_id or linked_folder_ids of folder "/a" 
+new SolrQuery("*:*").addFilterQuery("{!disjoin v=folders.id|folder_id,linked_folder_ids|path:\\/a}")  
+
+// find all files of type "manual" or under folder "/a"
+new SolrQuery("*:*").addFilterQuery("{!disjoin " + 
+	"v=folders.id|folder_id|path:\\/a " + 
+	"v1=types.id|type_id|{!graph from=parent_id to=id}type:manual}"
+	);
+```
 
 
-Typically, an application that uses Solr should embed all search-able fields in the document.  Searching is  
-
-    {!disjoin v=folders.id|folder_id|path:"/a"}

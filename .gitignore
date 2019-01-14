@@ -1,5 +1,6 @@
 .classpath
 .project
+.readme.md.html
 .factorypath
 target/
 .settings/
