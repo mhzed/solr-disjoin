@@ -134,8 +134,7 @@ class JoinQstr {
     } catch (IOException e) {
       throw new RuntimeException(e);
     } finally {
-      if (fromRef != null)
-        fromRef.decref();
+      if (fromRef != null) fromRef.decref();
       fromCore.close(); // dec ref count
     }
   }
