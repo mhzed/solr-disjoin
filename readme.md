@@ -2,15 +2,16 @@
 
 DisJoin stands for disjunction join.
 
-Solr supports a limited form of [join](https://wiki.apache.org/solr/Join), 
+Solr supports a form of [join](https://wiki.apache.org/solr/Join), 
 equivalent to RDMBS inner-join on a single field.  Though limited, Join query 
-can be very useful in certain contexts []().  
+can be very useful in certain contexts.  
 
 Multiple join queries can be combined together by adding each as a filter query 
 to the main Solr Query.  The join conditions together form a logical conjunction 
 due to the nature of filter query.  However sometimes a disjunction of join 
 conditions are desired.  This DisJoin query plugin fills this requirement.  
-The examples below illustrate some use cases for disjunction join.
+
+The examples in the following sections illustrate some use cases for disjunction join.
 
 ## Pre-requisites and limitations
 
@@ -74,9 +75,8 @@ The format of each join query is:
 
 Disjoin supports the post filter mode.  If the join set is large (i.e. larger than
 tens of thousands, or even millions), then it may be advantageous to run Disjoin
-as a post filter on the target collection, instead of turning the join set into 
-Lucene's set query (i.e. lucene.TermInSetQuery).  (TODO: performance test to validate
-this thesis).
+as a post filter on the target collection instead of turning the full join set into
+a Lucene query.  (TODO: performance test to validate this thesis).
 
 By default, Disjoin kicks into post filter mode if the combined join set size 
 exceeds 100000.  Client can change this behavior by passing in a local parameter
@@ -171,17 +171,17 @@ new SolrQuery("*:*").addFilterQuery("{!join fromIndex=folders from=id to=folder_
 // find all files with folder_id of folder "/a" or "/x"
 new SolrQuery("*:*").addFilterQuery("{!join fromIndex=folders from=id to=folder_id}path:\\/a OR path:\\/x");
 
-// find all files of type "manual"
+// find all files of type "manual" or its descendant types
 new SolrQuery("*:*").addFilterQuery("{!join fromIndex=types from=id to=type_id}{!graph from=parent_id to=id}type:manual");
 ```
 
-The following queries are not possible with "join", but work with "disjoin": 
+The following queries are not possible with "join", but possible with "disjoin": 
 
 ```java
 // find all files with folder_id or linked_folder_ids of folder "/a" 
 new SolrQuery("*:*").addFilterQuery("{!disjoin v=folders.id|folder_id,linked_folder_ids|path:\\/a}")  
 
-// find all files of type "manual" or under folder "/a"
+// find all files of type "manual" or its descendant types, or under folder "/a"
 new SolrQuery("*:*").addFilterQuery("{!disjoin " + 
 	"v=folders.id|folder_id|path:\\/a " + 
 	"v1=types.id|type_id|{!graph from=parent_id to=id}type:manual}"
