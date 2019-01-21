@@ -188,4 +188,12 @@ new SolrQuery("*:*").addFilterQuery("{!disjoin " +
 	);
 ```
 
+## Docker
 
+A docker image 'mhzed/solr-disjoin' is prebuilt based on solr:7.6-slim (see Dockerfile). It's essentially a solr image with this plugin pre-installed by default using plugin name "disjoin".
+
+A solr cloud instance with 2 solr nodes can be launched via command:
+```
+docker-compose -f cloud/docker-compose.yml up
+```
+Browse to http://localhost:8981/ to access cloud admin console.
