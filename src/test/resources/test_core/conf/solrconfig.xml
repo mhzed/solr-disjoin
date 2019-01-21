@@ -1363,7 +1363,7 @@
      <transformer name="qecBooster" class="org.apache.solr.response.transform.EditorialMarkerFactory" />
     -->
     
-<queryParser class="com.mhzed.solr.disjoin.DisJoinQParserPlugin" name="djoin">
+<queryParser class="com.mhzed.solr.disjoin.DisJoinQParserPlugin" name="disjoin">
 </queryParser>
     
 </config>

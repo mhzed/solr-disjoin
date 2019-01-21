@@ -214,7 +214,7 @@ public class DisJoinTest extends SolrCloudTestCase {
     }, false));
   }
   // void testDelByQuery() throws SolrServerException, IOException {
-  //   String q = new SolrQuery("*:*").addFilterQuery(String.format("{!djoin}%s",
+  //   String q = new SolrQuery("*:*").addFilterQuery(String.format("{!disjoin}%s",
   //     pathQuery("/2/2/0", "id_ss", "folder_id_ss"))).toQueryString();
   //   client.deleteByQuery(DocCollection, q);
   //   client.commit(DocCollection);
@@ -238,7 +238,7 @@ public class DisJoinTest extends SolrCloudTestCase {
     String qs = IntStream.range(0, joinQueries.length).mapToObj(i->
       "v" + (i==0?"":i) + "=" + ClientUtils.encodeLocalParamVal(joinQueries[i])).collect(Collectors.joining(" "));
 		return new SolrQuery(mainQuery).addFilterQuery(String.format(
-            "{!djoin %s pfsz=%d}", qs, postFilter ? -1 : (1<<30)            
+            "{!disjoin %s pfsz=%d}", qs, postFilter ? -1 : (1<<30)            
 						)).setRows(10000).setShowDebugInfo(true);
 
   }
