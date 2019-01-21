@@ -68,13 +68,13 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.1</version>
         <configuration>
+          <trimStackTrace>false</trimStackTrace>
           <argLine>${surefireArgLine}</argLine>
           <skipTests>${skip.unit.tests}</skipTests>
           <excludes>
-            <exclude>**/IT*.java</exclude>
+            <exclude>**/Docker*.java</exclude>
           </excludes>
           <systemPropertyVariables>
-            
           </systemPropertyVariables>
         </configuration>
       </plugin>

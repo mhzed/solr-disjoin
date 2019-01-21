@@ -197,3 +197,16 @@ A solr cloud instance with 2 solr nodes can be launched via command:
 docker-compose -f cloud/docker-compose.yml up
 ```
 Browse to http://localhost:8981/ to access cloud admin console.
+
+## Performance test
+
+To run performance test via docker, run:
+```
+mvn -Dtest=DockerPerformanceTest test
+```
+
+Above test will launch a single node solr docker instance, populate it with data, run the join/disjoin queries and produce a report.  The docker instance is named 'solr-disjoin-test', it's preserved locally along with already populated test data.  To remove it, run:
+```
+docker stop solr-disjoin-test
+docker rm solr-disjoin-test
+```

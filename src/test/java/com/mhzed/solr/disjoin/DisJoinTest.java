@@ -32,13 +32,6 @@ public class DisJoinTest extends SolrCloudTestCase {
   static final String FolderCollection = "folders";
   static final String SingleDocFolderCollection = "docfolders";
 	
-	static final String PathField = "path_descendent_path";
-	static final String IdField = "id";	// for test join by string
-	static final String IntField = "id_i";	// for test join by integer
-  static final String LongField = "id_l";	// for test join by long
-  static final String DoubleField = "id_d";	// for test join by double
-  static final String TextField = "id_t"; // for unsuported type test 
-	static final String ParentField = "parent_id_s";
 	static {
 		System.setProperty("java.security.egd", "file:/dev/./urandom");		
     System.setProperty("solr.log.dir", "./logs");
@@ -61,11 +54,11 @@ public class DisJoinTest extends SolrCloudTestCase {
     CollectionAdminRequest.createCollection(
       SingleDocFolderCollection, "_default", 1, NodeCount).process(client);
   
-    List<SolrInputDocument> folders = branch("", null, 0, 3, 3);	// size: 3^1 + 3^2 + 3^3 = 39
+    List<SolrInputDocument> folders = TestData.branch("", null, 0, 3, 3);	// size: 3^1 + 3^2 + 3^3 = 39
     new UpdateRequest().add(folders).process(client, FolderCollection);
     client.commit(FolderCollection);
 
-    List<SolrInputDocument> folderdocs = docs(folders);
+    List<SolrInputDocument> folderdocs = TestData.docsUnder(folders);
     ArrayList<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
     docs.addAll(randDocs(11));
     docs.addAll(folderdocs.subList(0, 10));
@@ -78,7 +71,7 @@ public class DisJoinTest extends SolrCloudTestCase {
     client.commit(DocCollection);
 
     new UpdateRequest().add(folders).process(client, SingleDocFolderCollection);
-    new UpdateRequest().add(docs(folders)).process(client, SingleDocFolderCollection);
+    new UpdateRequest().add(TestData.docsUnder(folders)).process(client, SingleDocFolderCollection);
     client.commit(SingleDocFolderCollection);      
 	}
   @AfterClass
@@ -246,7 +239,7 @@ public class DisJoinTest extends SolrCloudTestCase {
 		return String.format(
 						"%s.%s|%s|{!graph from=%s to=%s}%s:%s", 
 						FolderCollection, "id", "folder_id_s",
-						ParentField, IdField, IdField, ClientUtils.escapeQueryChars(id));
+						TestData.ParentField, TestData.IdField, TestData.IdField, ClientUtils.escapeQueryChars(id));
 	}
 
   String pathQuery(String fromIndex, String path, String from, String to) {
@@ -254,7 +247,7 @@ public class DisJoinTest extends SolrCloudTestCase {
       fromIndex,
       from,
       to,
-      PathField + ":" + ClientUtils.escapeQueryChars(path)
+      TestData.PathField + ":" + ClientUtils.escapeQueryChars(path)
     );
 	}
 
@@ -262,62 +255,10 @@ public class DisJoinTest extends SolrCloudTestCase {
 		return pathQuery(FolderCollection, path, from, to);
 	}
 		
-	
-	// generate test folder docs
-	static List<SolrInputDocument> branch(String path, Integer parentId, int idoffset, int width, int depth) {
-		List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
-		if (depth <= 0) return docs;
-		int id = idoffset;
-		
-		List<Integer> childrenIds = new ArrayList<Integer>();
-		for (int w=0; w<width; w++) {
-      docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
-              "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
-							PathField, path + "/" + w, ParentField, parentId, "type_s", "folder"));
-			childrenIds.add(id);
-			id++;
-		}
-		for (int w=0; w<width; w++) {
-			List<SolrInputDocument> b = branch(path + "/" + w, childrenIds.get(w), id, width, depth-1);
-			id += b.size();
-			docs.addAll(b);
-		}
-		return docs;
-	}
-	// generate 1 doc for each folder 
-	static List<SolrInputDocument> docs(List<SolrInputDocument> folders) {
-    
-		return folders.stream().map(folder-> {
-      Integer id = (Integer)folder.getFieldValue(IntField);
-			return docOf(
-        "folder_" + IdField + "_s", String.valueOf(id), 
-        "folder_" + IntField, id,
-        "folder_" + LongField, Long.valueOf(id),
-        "folder_" + DoubleField, Double.valueOf(id),
-        "folder_" + TextField, id,
-        "folder_" + IdField + "_ss", String.valueOf(id), 
-        "folder_" + IntField + "s", id,
-        "folder_" + LongField + "s", Long.valueOf(id),
-        "folder_" + DoubleField + "s", Double.valueOf(id),
-        "link_folder_" + IdField + "_s", String.valueOf(id+1), 
-        "link_folder_" + IntField, id+1,
-        "link_folder_" + LongField, Long.valueOf(id+1),
-        "type_s", "doc" );
-    }).collect(Collectors.toList());
-		
-  }
   static List<SolrInputDocument> randDocs(int n) {
     return IntStream.range(0, n).mapToObj(i->
-      docOf("random_d", Math.random(), "random_t", Math.random())
+      TestData.docOf("random_d", Math.random(), "random_t", Math.random())
     ).collect(Collectors.toList());
   }
-	
-	public static SolrInputDocument docOf(Object... args) {
-		SolrInputDocument doc = new SolrInputDocument();
-		for (int i = 0; i < args.length; i += 2) {
-			doc.addField(args[i].toString(), args[i + 1]);
-		}
-		return doc;
-	}
-		
+			
 }
