@@ -15,16 +15,7 @@ The examples in the following sections illustrate some use cases for disjunction
 
 ## Pre-requisites and limitations
 
-1. Tested on Solr 7.4+
-2. The joined fields MUST be configured as 'docValues="true"' in schema.  
-3. Currently the supported field types are: 
-   - IntPointField
-   - LongPointField
-   - DoublePointField
-   - StrField
-4. For multi-valued field, the join condition is set-intersect: any one of the
-   value matches.
-5. The join 'fromIndex' should be created as a [colocated collection](https://lucene.apache.org/solr/guide/7_5/colocating-collections.html)
+Same as Solr's built in [join query](https://lucene.apache.org/solr/guide/7_6/other-parsers.html)
 
 ## Installation and usage
 
@@ -71,24 +62,6 @@ The format of each join query is:
 * query: the query to run on fromCollection to collect "fromField" results.
 
 
-### Post filter
-
-Disjoin supports the post filter mode.  If the join set is large (i.e. larger than
-tens of thousands, or even millions), then it may be advantageous to run Disjoin
-as a post filter on the target collection instead of turning the full join set into
-a Lucene query.  (TODO: performance test to validate this thesis).
-
-By default, Disjoin kicks into post filter mode if the combined join set size 
-exceeds 100000.  Client can change this behavior by passing in a local parameter
-"pfsz" at query time.  For example:
-```java
-// always run in post filter mode
-new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz} pfsz=0");
-// run in post filter mode if join set size exceeds 10 million
-new SolrQuery("*:*").addFilterQuery("{!disjoin v=fromIndex.id|to_id|title:xyz} pfsz=10000000");
-```
-
- 
 ## Example:
 
 In this example there are three collections:  the main "files" collection with N

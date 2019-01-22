@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -75,148 +74,108 @@ public class DisJoinTest extends SolrCloudTestCase {
   public static void teardown() throws Exception {
   }	
   
-  public boolean isFilter(Map<String, Object> debugMap) {
-  	return debugMap.toString().contains("{FilterJoin={={type=filter,");
-  }
-  public boolean isPostFilter(Map<String, Object> debugMap) {
-  	return debugMap.toString().contains("{type=post-filter,");
-  }
-  public boolean isCached(Map<String, Object> debugMap) {
-  	return !isFilter(debugMap) && !isPostFilter(debugMap);
-  }
-
-
 	@Test
 	public void test() throws Exception {
-    testWithCacheInspection();
-    
-    testGraphJoin(false);
-    testGraphJoin(true);
-    testPathJoin(false);
-    testPathJoin(true);
+    testSingle();
+    testGraphJoin();
+    testPathJoin();
     testMvJoin();
     testSameCollectionJoin();    
-
-    testJoinWithNone(true);
-    testJoinWithNone(false);
-
+    testJoinWithNone();
+    testDelByQuery();
   }
-  private void testWithCacheInspection() throws SolrServerException, IOException {
+  private void testSingle() throws SolrServerException, IOException {
 		QueryResponse r;
 		r = client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/0", "id", "folder_id_s")}, false));
+      pathQuery("/0", "id", "folder_id_s")}));
 		assertEquals(13, r.getResults().getNumFound());
-		assertTrue(isFilter(r.getDebugMap()));
 		
 		r = client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/0", "id", "folder_id_s")}, true));
+      pathQuery("/0", "id", "folder_id_s")}));
 		assertEquals(13, r.getResults().getNumFound());
-		assertTrue(isCached(r.getDebugMap()));	// even if post-filter is specified, query cache catches it
 		
 		r = client.query(DocCollection, disJoin("id:*", new String[]{
-      pathQuery("/0", "id", "folder_id_s")}, false));
+      pathQuery("/0", "id", "folder_id_s")}));
 		assertEquals(13, r.getResults().getNumFound());
-		assertTrue(isCached(r.getDebugMap()));	// main query changed, but filter query should still be cached
 
 		r = client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/1/0", "id", "folder_id_s")}, true));
+      pathQuery("/1/0", "id", "folder_id_s")}));
 		assertEquals(4, r.getResults().getNumFound());
-		assertTrue(isPostFilter(r.getDebugMap()));
 		
 		r = client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/1/0", "id", "folder_id_s")}, false));
+      pathQuery("/1/0", "id", "folder_id_s")}));
 		assertEquals(4, r.getResults().getNumFound());
-		assertTrue(isCached(r.getDebugMap()));	// query cache catches it
 		
 		r = client.query(DocCollection, disJoin("id:*", new String[]{
-      pathQuery("/1/0", "id", "folder_id_s")}, true));
+      pathQuery("/1/0", "id", "folder_id_s")}));
 		assertEquals(4, r.getResults().getNumFound());
-		assertTrue(isPostFilter(r.getDebugMap()));	// main query changed, post filter invoked again 
 
   }
-  private void testJoinWithNone(boolean postFilter) throws SolrServerException, IOException {
+  private void testJoinWithNone() throws SolrServerException, IOException {
     QueryResponse r;
 		r = client.query(DocCollection, disJoin("id:*", new String[]{
-      pathQuery("/100", "id", "folder_id_s")}, postFilter));
+      pathQuery("/100", "id", "folder_id_s")}));
 		assertEquals(0, r.getResults().getNumFound());
   }
   private void testSameCollectionJoin() throws SolrServerException, IOException {
     QueryResponse r;
 		r = client.query(SingleDocFolderCollection, disJoin("*:*", new String[]{
-      pathQuery(SingleDocFolderCollection, "/0", "id", "folder_id_s")}, false));
+      pathQuery(SingleDocFolderCollection, "/0", "id", "folder_id_s")}));
 		assertEquals(13, r.getResults().getNumFound());
   }
-  private void testGraphJoin(boolean postFilter) throws SolrServerException, IOException {
+  private void testGraphJoin() throws SolrServerException, IOException {
     QueryResponse r;
-		r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("0")}, postFilter));
+		r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("0")}));
 		assertEquals(13, r.getResults().getNumFound());
 
-    r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("3")}, postFilter));
+    r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("3")}));
     assertEquals(4, r.getResults().getNumFound());
 
-    r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("-1")}, postFilter));
+    r = client.query(DocCollection, disJoin("*:*", new String[]{graphQuery("-1")}));
     assertEquals(39, r.getResults().getNumFound());
 
   }
-  private void testPathJoin(boolean postFilter) throws SolrServerException, IOException {
+  private void testPathJoin() throws SolrServerException, IOException {
     QueryResponse r;
     r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1/0", "id", "folder_id_s"),
       pathQuery("/2/0", "id_i", "folder_id_i"),
       pathQuery("/0/0", "id_d", "folder_id_d")
-    }, postFilter));
+    }));
     assertEquals(12, r.getResults().getNumFound());
     r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1/0", "id", "folder_id_s"),
       pathQuery("/2/0", "id", "folder_id_s")
-    }, postFilter));
+    }));
     assertEquals(8, r.getResults().getNumFound());
     r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
       pathQuery("/1", "id_l", "folder_id_l"),
       graphQuery("0")
-    }, postFilter));
+    }));
     assertEquals(26, r.getResults().getNumFound());
     r = client.query(DocCollection, disJoin("*:*", new String[]{
       pathQuery("/0/1", "id_l", "folder_id_l"),
       graphQuery("0")
-    }, postFilter));
+    }));
     assertEquals(13, r.getResults().getNumFound());
 
     r = client.query(DocCollection, disJoin("*:*", new String[]{
       pathQuery("/0/1", "id_l", "folder_id_l,link_folder_id_l")
-    }, postFilter));
+    }));
     assertEquals(4+1*2, r.getResults().getNumFound());    // 1 is link_*_id offset from id
 
   }
-  @Test(expected = SolrServerException.class)
-  public void testToTypesNotSameError() throws SolrServerException, IOException {
-    client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/0/1", "id_l", "folder_id_l,link_folder_id_s")
-    }, false));
-  }
-  @Test(expected = SolrServerException.class)
-  public void testJoinTypeNoMatchError() throws SolrServerException, IOException {
-    client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/0/1", "id", "folder_id_i")
-    }, false));
-  }
-  @Test(expected = SolrServerException.class)
-  public void testJoinTypeUnsupportedError() throws SolrServerException, IOException {
-    client.query(DocCollection, disJoin("*:*", new String[]{
-      pathQuery("/0/1", "id_t", "folder_id_t")
-   
-    }, false));
-  }
-  // void testDelByQuery() throws SolrServerException, IOException {
-  //   String q = new SolrQuery("*:*").addFilterQuery(String.format("{!disjoin}%s",
-  //     pathQuery("/2/2/0", "id_ss", "folder_id_ss"))).toQueryString();
-  //   client.deleteByQuery(DocCollection, q);
-  //   client.commit(DocCollection);
-	// 	QueryResponse r = client.query(DocCollection, disJoin("*:*", new String[]{
-  //     pathQuery("/2/2", "id", "folder_id_s")}, false));
-	// 	assertEquals(3, r.getResults().getNumFound());
 
-  // }
+  void testDelByQuery() throws SolrServerException, IOException {
+    // String q = new SolrQuery("*:*").addFilterQuery(String.format("{!disjoin}%s",
+    //   pathQuery("/2/2/0", "id_ss", "folder_id_ss"))).toQueryString();
+    // client.deleteByQuery(DocCollection, q);
+    // client.commit(DocCollection);
+		// QueryResponse r = client.query(DocCollection, disJoin("*:*", new String[]{
+    //   pathQuery("/2/2", "id", "folder_id_s")}, false));
+		// assertEquals(3, r.getResults().getNumFound());
+
+  }
   void testMvJoin() throws SolrServerException, IOException {
     QueryResponse r;
     r = client.query(DocCollection, disJoin("type_s:doc", new String[]{
@@ -224,15 +183,15 @@ public class DisJoinTest extends SolrCloudTestCase {
       pathQuery("/2/0", "id_is", "folder_id_is"),
       pathQuery("/0/0", "id_ls", "folder_id_ls"),
       pathQuery("/0/2", "id_ds", "folder_id_ds")
-    }, false));
+    }));
     assertEquals(16, r.getResults().getNumFound());
   }
 
-	SolrQuery disJoin(String mainQuery, String[] joinQueries, boolean postFilter) {
+	SolrQuery disJoin(String mainQuery, String[] joinQueries) {
     String qs = IntStream.range(0, joinQueries.length).mapToObj(i->
       "v" + (i==0?"":i) + "=" + ClientUtils.encodeLocalParamVal(joinQueries[i])).collect(Collectors.joining(" "));
 		return new SolrQuery(mainQuery).addFilterQuery(String.format(
-            "{!disjoin %s pfsz=%d}", qs, postFilter ? -1 : (1<<30)            
+            "{!disjoin %s}", qs
 						)).setRows(0).setShowDebugInfo(true);
 
   }
