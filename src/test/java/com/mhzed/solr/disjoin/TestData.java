@@ -6,7 +6,8 @@ import java.util.List;
 import org.apache.solr.common.SolrInputDocument;
 
 class TestData {
-	static final String PathField = "path_descendent_path";
+  static final String PathField = "path_descendent_path";
+  static final String PathStringField = "path_s";
 	static final String IdField = "id";	// for test join by string
 	static final String IntField = "id_i";	// for test join by integer
   static final String LongField = "id_l";	// for test join by long
@@ -52,7 +53,7 @@ class TestData {
   static SolrInputDocument folder(Integer id, String path, Integer parentId) {
     return docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
     "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
-    PathField, path, ParentField, parentId, "type_s", "folder");    
+    PathField, path, PathStringField, path, ParentField, parentId, "type_s", "folder");    
   }
   static SolrInputDocument docInFolder(Integer folderId) {
     return docOf(

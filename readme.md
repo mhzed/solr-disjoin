@@ -40,12 +40,23 @@ new SolrQuery("*:*").addFilterQuery(
    "{!disjoin v=fromIndex.id|to_id|title:xyz v1=col2.id|to2_id|name:joe}");
 ```
 
-### Query format
+### Docker
+
+A docker image 'mhzed/solr-disjoin' is prebuilt based on solr:7.6-slim (see Dockerfile). It's essentially a solr image with this plugin pre-installed by default using plugin name "disjoin".
+
+A solr cloud instance with 2 solr nodes can be launched via command:
+```
+docker-compose -f cloud/docker-compose.yml up
+```
+Browse to http://localhost:8981/ to access cloud admin console.
+
+
+## Query format
 
 Multiple join queries are passed in via local parameters "v,v1,v2,...". Make 
 sure the index after 'v' is consecutive: i.e. for "v,v1,v3", v3 is dropped. 
 
-When there is exactly one join condition ("v" only), disjoin behaves the same as solr's 
+When there is exactly one join condition ("v" only), DisJoin behaves the same as solr's 
 join query. 
 
 The format of each join query is:
@@ -161,16 +172,6 @@ new SolrQuery("*:*").addFilterQuery("{!disjoin " +
 	);
 ```
 
-## Docker
-
-A docker image 'mhzed/solr-disjoin' is prebuilt based on solr:7.6-slim (see Dockerfile). It's essentially a solr image with this plugin pre-installed by default using plugin name "disjoin".
-
-A solr cloud instance with 2 solr nodes can be launched via command:
-```
-docker-compose -f cloud/docker-compose.yml up
-```
-Browse to http://localhost:8981/ to access cloud admin console.
-
 ## Performance test
 
 To run performance test via docker, run:
@@ -183,3 +184,50 @@ Above test will launch a single node solr docker instance, populate it with data
 docker stop solr-disjoin-test
 docker rm solr-disjoin-test
 ```
+
+On a 2013 MacBook Pro, the sample results are:
+```
+PathToken(str). Size 5592404 took 2354ms
+PathToken(str). Size 1398101 took 1579ms
+PathToken(str). Size 1398101 took 1064ms
+PathToken(str). Size 1398101 took 868ms
+PathToken(str). Size 1398101 took 883ms
+PathToken(str). Size 349525 took 662ms
+PathToken(str). Size 1365 took 757ms
+PathToken(str). Size 5 took 597ms
+PathToken(int). Size 5592404 took 18620ms
+PathToken(int). Size 1398101 took 39858ms
+PathToken(int). Size 1398101 took 6729ms
+PathToken(int). Size 1398101 took 53802ms
+PathToken(int). Size 1398101 took 9454ms
+PathToken(int). Size 349525 took 3693ms
+PathToken(int). Size 349525 took 165ms
+PathToken(int). Size 349525 took 1097ms
+PathToken(int). Size 349525 took 184ms
+PathToken(int). Size 87381 took 59ms
+PathToken(int). Size 87381 took 49ms
+PathToken(int). Size 87381 took 50ms
+PathToken(int). Size 1365 took 10ms
+PathToken(int). Size 5 took 14ms
+PathToken: dis-join of 4 queries. Size 5592404 took 3683ms
+Graph. Size 1398101 took 3096ms
+Path. Size 1398101 took 89ms
+Graph. Size 349525 took 552ms
+Path. Size 349525 took 20ms
+```
+
+- PathToken(str) joins on a string field
+- PathToken(int) joins on a numeric field (LongPoint)
+- The benchmark applies to Solr's join query, and DisJoin implementation calls Solr's join query internally
+  
+Observations:
+1. When join on a string field, speed is uniform and proportional to join set size.
+2. When join on a numeric (*Point) field, speed is unpredictable.  There could be 20x speed difference on joins with the same set size. Sometimes smaller size took much longer than larger size.  The conjecture here is that perhaps the index layout in memory is causing cache thrashing in some cases.
+3. When join on a numeric (*Point) field, if join set size is small (100k or less), speed is very fast in general.
+4. Graph query overhead is considerable if result size is in hundreds of thousands or more.  This is perhaps related to "2" as join on *Point fields internally calls Graph query apis.
+5. Dis-join of 4 queries is about 20% faster than 4 join queries issued separately.
+
+Conclusions:
+* Join on string fields in general.
+* If join set size is known to be small, i.e. < 100k, then join on numeric fields is faster.
+

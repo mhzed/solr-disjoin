@@ -1,6 +1,5 @@
 package com.mhzed.solr.disjoin;
 
-import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ public class DockerPerformanceTest {
   static TestDockerServer dockerServer;
   public static final int BatchSize = 100000;
   public static int FolderWidth = 4;
-  public static int FolderDepth = 11;   // about 1.4 million in total 
+  public static int FolderDepth = 11;   // about 5.6 million in total 
 	@BeforeClass
 	public static void setup() throws Exception {
     dockerServer = new TestDockerServer();
@@ -39,83 +38,95 @@ public class DockerPerformanceTest {
     dockerServer.shutdown();
   }
   @Test
-  public void basicTest() throws SyntaxError, SolrServerException, IOException {
+  public void test() throws SyntaxError, SolrServerException, IOException {
+
+    runPathJoin("/root");
+    runPathJoin("/root/0");
+    runPathJoin("/root/1");
+    runPathJoin("/root/2");
+    runPathJoin("/root/3");
+    runPathJoin("/root/0/0");
+    runPathJoin("/root/0/0/0/0/0/0");
+    runPathJoin("/root/0/0/0/0/0/0/0/0/0/0");
+
+    runPathJoinInt("/root");    
+    runPathJoinInt("/root/0");
+    runPathJoinInt("/root/1");
+    runPathJoinInt("/root/2");
+    runPathJoinInt("/root/3");
+    runPathJoinInt("/root/2/1");
+    runPathJoinInt("/root/0/0");
+    runPathJoinInt("/root/3/3");
+    runPathJoinInt("/root/1/0");
+    runPathJoinInt("/root/1/1/2");
+    runPathJoinInt("/root/3/3/0");
+    runPathJoinInt("/root/2/1/0");
+    runPathJoinInt("/root/0/0/0/0/0/0");
+    runPathJoinInt("/root/0/0/0/0/0/0/0/0/0/0");
+
     QueryResponse r;
-    r = query(join("*:*", pathJoinQuery("/root/0/0/0/0/0/0/0/0/0/0")));
-    assertEquals(5, r.getResults().getNumFound());
-    r = query(join("*:*", graphJoinQuery("/root/0/0/0/0/0/0/0/0/0/0")));
-    assertEquals(5, r.getResults().getNumFound());
-    r = query(disJoin("*:*", new String[]{
-      pathDisJoinQuery("/root/0/0/0/0/0/0/0/0/0/0")
-    }, false));
-    assertEquals(5, r.getResults().getNumFound());
-    r = query(disJoin("*:*", new String[]{
-      graphDisJoinQuery("/root/0/0/0/0/0/0/0/0/0/0")
-    }, false));
-    assertEquals(5, r.getResults().getNumFound());
-  }
-  @Test
-  public void testPerformance() throws SyntaxError, SolrServerException, IOException {
-    final String TestPath = "/root";
-    QueryResponse r;
-    LOGGER.info("start");
-    r = query(join("*:*", pathJoinQuery(TestPath)));
-    LOGGER.info("{}",r.getResults().getNumFound());
-    r = query(join("type_s:doc", pathJoinQuery(TestPath)));
-    LOGGER.info("{}",r.getResults().getNumFound());
-    r = query(disJoin("*:*", new String[]{
-      pathDisJoinQuery(TestPath)
-    }, true));
-    LOGGER.info("{}",r.getResults().getNumFound());
     r = query(disJoin("type_s:doc", new String[]{
-      pathDisJoinQuery(TestPath)
-    }, true));
-    LOGGER.info("{}",r.getResults().getNumFound());
-    // path query, solr join, disjoin, disjoin post filter
-    // graph query, solr join, disjoin, disjoin post filter
+      pathDisJoinQuery("/root/0", "id", "folder_id_s"),
+      pathDisJoinQuery("/root/1", "id", "folder_id_s"),
+      pathDisJoinQuery("/root/2", "id", "folder_id_s"),
+      pathDisJoinQuery("/root/3", "id", "folder_id_s")
+    }));
+    report("PathToken: dis-join of 4 queries", r);
+
+    runGraphQueryCompare("/root/0");
+    runGraphQueryCompare("/root/0/0");
   }
+  private void report(String line, QueryResponse r) {
+    System.out.println(String.format("%s. Size %d took %dms", line, r.getResults().getNumFound(), r.getQTime()));
+  }
+  public void runPathJoin(String path) throws SyntaxError, SolrServerException, IOException {
+    QueryResponse r;
+    r = query(disJoin("type_s:doc", new String[]{
+      pathDisJoinQuery(path, "id", "folder_id_s")
+    }));
+    report("PathToken(str)", r);
+  }
+  public void runPathJoinInt(String path) throws SyntaxError, SolrServerException, IOException {
+    QueryResponse r;
+    r = query(disJoin("type_s:doc", new String[]{
+      pathDisJoinQuery(path, "id_l", "folder_id_l")
+    }));
+    report("PathToken(int)", r);
+  }
+  public void runGraphQueryCompare(String path) throws SyntaxError, SolrServerException, IOException {    
+    QueryResponse r;
+    r = dockerServer.getClient().query(TestDockerServer.FolderCore, new SolrQuery(
+      String.format("{!graph from=%s to=%s}%s:\"%s\"", 
+      TestData.ParentField, TestData.IdField, TestData.PathStringField, 
+      ClientUtils.escapeQueryChars(path))));
+    report("Graph", r);
+    r = dockerServer.getClient().query(TestDockerServer.FolderCore, new SolrQuery(
+      String.format("%s:\"%s\"", 
+      TestData.PathField, 
+      ClientUtils.escapeQueryChars(path))));
+    report("Path", r);
+  }
+
   QueryResponse query(SolrQuery q) throws SolrServerException, IOException {
     return dockerServer.getClient().query(TestDockerServer.FileCore, q);
   }
-	SolrQuery disJoin(String mainQuery, String[] disJoinQueries, boolean postFilter) {
+	SolrQuery disJoin(String mainQuery, String[] disJoinQueries) {
     String qs = IntStream.range(0, disJoinQueries.length).mapToObj(i->
       "v" + (i==0?"":i) + "=" + ClientUtils.encodeLocalParamVal(disJoinQueries[i]))
       .collect(Collectors.joining(" "));
 		return new SolrQuery(mainQuery).addFilterQuery(String.format(
-            "{!disjoin %s pfsz=%d}", qs, postFilter ? -1 : (1<<30)            
-            )).setRows(0).setShowDebugInfo(true);
+            "{!disjoin %s}", qs)).setRows(0).setShowDebugInfo(true);
   }
   SolrQuery join(String mainQuery, String joinQuery) {
 		return new SolrQuery(mainQuery).addFilterQuery(joinQuery).setRows(0).setShowDebugInfo(true);
   }
 
-  String pathJoinQuery(String path) {
-		return String.format("{!join fromIndex=%s from=%s to=%s}%s:%s",
-      TestDockerServer.FolderCore, "id", "folder_id_s",
-      TestData.PathField, ClientUtils.escapeQueryChars(path)
-    );
-  }
-  String pathDisJoinQuery(String path) {
+  String pathDisJoinQuery(String path, String from, String to) {
 		return String.format("%s.%s|%s|%s:%s",
-      TestDockerServer.FolderCore, "id", "folder_id_s",
+      TestDockerServer.FolderCore, from, to,
       TestData.PathField, ClientUtils.escapeQueryChars(path)
     );
-  }
-  String graphJoinQuery(String path) {
-		return String.format("{!join fromIndex=%s from=%s to=%s}{!graph from=%s to=%s}%s:\"%s\"",
-      TestDockerServer.FolderCore, "id", "folder_id_s",
-      TestData.ParentField, TestData.IdField,
-      TestData.PathField, ClientUtils.escapeQueryChars(path)
-    );
-  }
-	String graphDisJoinQuery(String path) {
-		return String.format(
-      "%s.%s|%s|{!graph from=%s to=%s}%s:\"%s\"", 
-      TestDockerServer.FolderCore, "id", "folder_id_s",
-      TestData.ParentField, TestData.IdField, TestData.PathField, 
-      ClientUtils.escapeQueryChars(path));
-	}
-  
+  }  
 
   private static int nextFolderId() throws SolrServerException, IOException {
     QueryResponse r = dockerServer.getClient().query(
@@ -166,6 +177,7 @@ public class DockerPerformanceTest {
     }
   }
   public static void optimize() throws Exception {
+    LOGGER.info("Optimizing...");
     SolrClient c = dockerServer.getClient();
     c.optimize(TestDockerServer.FolderCore);
     c.optimize(TestDockerServer.FileCore);
