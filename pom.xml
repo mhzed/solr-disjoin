@@ -24,19 +24,19 @@
     <dependency>
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-test-framework</artifactId>
-      <version>7.4.0</version>
+      <version>7.6.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-core</artifactId>
-      <version>7.4.0</version>
+      <version>7.6.0</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-solrj</artifactId>
-      <version>7.4.0</version>
+      <version>7.6.0</version>
       <scope>provided</scope>
     </dependency>
   </dependencies>

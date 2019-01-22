@@ -65,7 +65,7 @@ The format of each join query is:
 ## Example:
 
 In this example there are three collections:  the main "files" collection with N
-shards, and "folders" and "types" collection with 1 shard (created via 
+shards, and "folders" and "types" collection with 1 shard [created via 
 colocated collection](https://lucene.apache.org/solr/guide/7_5/colocating-collections.html)).
 Collection "folder" store a directory structure.  Each file is placed under one folder, but
 could also be linked to multiple other parent folders.  Collection "types" stores a 

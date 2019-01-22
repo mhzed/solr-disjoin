@@ -45,10 +45,12 @@ public class DisJoinTest extends SolrCloudTestCase {
 		cluster.waitForAllNodes(60000);
 		client = cluster.getSolrClient();
 		
-		CollectionAdminRequest.createCollection(
-			DocCollection, "_default", NodeCount - 2 , 1).process(client);
-		CollectionAdminRequest.createCollection(
-      FolderCollection, "_default", 1, NodeCount).process(client);      
+    CollectionAdminRequest.createCollection(
+      FolderCollection, "_default", 1, NodeCount-2).process(client);
+    CollectionAdminRequest.Create createDocs = CollectionAdminRequest.createCollection(
+      DocCollection, "_default", NodeCount - 2 , 1);
+    createDocs.setWithCollection(FolderCollection);
+    createDocs.process(client);      
     CollectionAdminRequest.createCollection(
       SingleDocFolderCollection, "_default", 1, NodeCount).process(client);
   
