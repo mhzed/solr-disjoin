@@ -190,7 +190,7 @@ To remove the test container, run:
 docker rm solr-disjoin-test
 ```
 
-On a 2013 MacBook Pro, the sample results are:
+On a 2013 MacBook Pro 2.6 GHz Intel Core i5, the sample results are:
 ```
 PathToken(str). Size 5592404 took 2354ms
 PathToken(str). Size 1398101 took 1579ms
@@ -221,9 +221,40 @@ Graph. Size 349525 took 552ms
 Path. Size 349525 took 20ms
 ```
 
+On another 2 core Intel(R) Xeon(R) Gold 6148 CPU @ 2.40GHz , the sample results are:
+```
+PathToken(str). Size 5592404 took 2023ms
+PathToken(str). Size 1398101 took 1059ms
+PathToken(str). Size 1398101 took 804ms
+PathToken(str). Size 1398101 took 746ms
+PathToken(str). Size 1398101 took 743ms
+PathToken(str). Size 349525 took 618ms
+PathToken(str). Size 1365 took 605ms
+PathToken(str). Size 5 took 541ms
+PathToken(int). Size 5592404 took 4979ms
+PathToken(int). Size 1398101 took 56891ms
+PathToken(int). Size 1398101 took 5848ms
+PathToken(int). Size 1398101 took 25612ms
+PathToken(int). Size 1398101 took 4246ms
+PathToken(int). Size 349525 took 1639ms
+PathToken(int). Size 349525 took 77ms
+PathToken(int). Size 349525 took 89ms
+PathToken(int). Size 349525 took 151ms
+PathToken(int). Size 87381 took 27ms
+PathToken(int). Size 87381 took 21ms
+PathToken(int). Size 87381 took 223ms
+PathToken(int). Size 1365 took 5ms
+PathToken(int). Size 5 took 7ms
+PathToken: dis-join of 4 queries. Size 5592404 took 3071ms
+Graph. Size 1398101 took 2479ms
+Path. Size 1398101 took 41ms
+Graph. Size 349525 took 414ms
+Path. Size 349525 took 6ms
+```
+
 - PathToken(str) joins on a string field
 - PathToken(int) joins on a numeric field (LongPoint)
-- The benchmark applies to Solr's join query, and DisJoin implementation calls Solr's join query internally
+- The benchmark applies to Solr's join query, as DisJoin implementation calls Solr's join query internally
   
 Observations:
 1. When join on a string field, speed is uniform and proportional to join set size.
