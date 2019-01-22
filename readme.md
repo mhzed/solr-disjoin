@@ -179,9 +179,14 @@ To run performance test via docker, run:
 mvn -Dtest=DockerPerformanceTest test
 ```
 
-Above test will launch a single node solr docker instance, populate it with data, run the join/disjoin queries and produce a report.  The docker instance is named 'solr-disjoin-test', it's preserved locally along with already populated test data.  To remove it, run:
+Above test will launch a single node solr docker instance, populate it with data, run the join/disjoin queries and produce a report.  The docker instance is named 'solr-disjoin-test', it's preserved locally along with already populated test data.  On first run, if the docker image "mhzed/solr-disjoin" needs to be downloaded, it may take a while.  The test also sleeps 10 seconds for the container to start, on some machine it may not be enough, and you will see test error.  In such case, manually start container first:
 ```
-docker stop solr-disjoin-test
+docker start solr-disjoin-test
+```
+Then run the maven command again.
+
+To remove the test container, run:
+```
 docker rm solr-disjoin-test
 ```
 
