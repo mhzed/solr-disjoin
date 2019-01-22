@@ -11,7 +11,6 @@ import org.apache.solr.client.solrj.response.CoreAdminResponse;
 import org.apache.solr.common.params.CoreAdminParams.CoreAdminAction;
 import org.apache.solr.common.util.NamedList;
 
-
 public class TestDockerServer extends TestServer {
   public static final String ContainerName = "solr-disjoin-test";
   public static final int TestPort = 26453;
@@ -29,8 +28,10 @@ public class TestDockerServer extends TestServer {
     Process p = exec(new Config("start docker", Arrays.asList("docker", "start", ContainerName) ));
     try {
       waitForPort(5, 2000, TestPort, p);
-    } catch (Exception e) {
+    } catch (Exception e) { // container does not yet exist, defaults to docker run
       super.launch();
+      // if image is downloaded, could take a while, wait up to 1000 secs
+      waitForPort(500, 2000, TestPort, this.server); 
     }
     client = new HttpSolrClient.Builder(getSolrUrl()).build();    
   }
@@ -46,20 +47,19 @@ public class TestDockerServer extends TestServer {
   public SolrClient getClient() {
     return client;
   }
+  // wait to fetch core status
   public CoreAdminResponse waitCoreStatus() throws Exception {
+    // sleep enough for solr to enter core loading state
     Thread.sleep(10000);
     CoreAdminRequest adminReq = new CoreAdminRequest();
     adminReq.setAction(CoreAdminAction.STATUS);
+    // loop check until all cores are loaded
     for (int n=0; n<20; n++) {
-      try {
-        CoreAdminResponse r = adminReq.process(client);
-        if (checkAllLoaded(r)) return r;
-        else Thread.sleep(1000);
-      } catch (Exception e) {
-        Thread.sleep(1000);
-      }
+      CoreAdminResponse r = adminReq.process(client);
+      if (checkAllLoaded(r)) return r;
+      else Thread.sleep(1000);
     }
-    throw new Exception("Wait timed out");
+    throw new Exception("Wait cores loading timed out");
   }
   public void ensureCoresCreated() throws Exception {
     CoreAdminResponse r = waitCoreStatus();
@@ -76,6 +76,7 @@ public class TestDockerServer extends TestServer {
     req.setConfigSet("_default");
     return req.process(client);
   }
+  // check core 'name' exits in r
   private boolean checkCoreExists(CoreAdminResponse r, String name) {
     for (int i = 0; i < r.getCoreStatus().size(); i++) {
       NamedList<Object> coreInfo = r.getCoreStatus().getVal(i);
@@ -83,8 +84,8 @@ public class TestDockerServer extends TestServer {
     }
     return false;
   }
+  // returns true if 0 cores or all cores are loaded successfully
   private boolean checkAllLoaded(CoreAdminResponse r) {
-
     for (int i = 0; i < r.getCoreStatus().size(); i++) {
       NamedList<Object> coreInfo = r.getCoreStatus().getVal(i);
       if (coreInfo.get("startTime") == null && coreInfo.getBooleanArg("isLoaded").booleanValue() == false) {

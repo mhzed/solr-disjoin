@@ -17,35 +17,43 @@ class TestData {
 
   @FunctionalInterface
   interface DocSink {
-    void apply(SolrInputDocument doc);
+    void apply(SolrInputDocument doc, int id) throws Exception;
+  }
+  static int branchSize( int width, int depth) {
+    int sum = 0;
+    for (int i=1; i<=depth; i++) {
+      sum += Math.pow(width, i);
+    }
+    return sum;
   }
   /**
-   * generate test folders breadth first, i.e.
+   * generate a uniform tree of test folders breadth first, i.e.
    *    0      1 
    *  2   3  4   5
    * 6 7 8 9 ....
+   * return number of folders generated, = sum(width^1, width^2, ... width^(depth))
    */
-  static List<SolrInputDocument> branch(String path, Integer parentId, int idoffset, 
-    int width, int depth) {
+  static int branch(String path, Integer parentId, int idoffset, 
+    int width, int depth, DocSink sink) throws Exception {
 
-		List<SolrInputDocument> docs = new ArrayList<SolrInputDocument>();
-		if (depth <= 0) return docs;
+		if (depth <= 0) return 0;
 		int id = idoffset;
 		
 		List<Integer> childrenIds = new ArrayList<Integer>();
 		for (int w=0; w<width; w++) {
-      docs.add(docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
-              "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
-							PathField, path + "/" + w, ParentField, parentId, "type_s", "folder"));
+      sink.apply(folder(id, path + "/" + w, parentId), id);
 			childrenIds.add(id);
 			id++;
 		}
 		for (int w=0; w<width; w++) {
-			List<SolrInputDocument> b = branch(path + "/" + w, childrenIds.get(w), id, width, depth-1);
-			id += b.size();
-			docs.addAll(b);
+			id += branch(path + "/" + w, childrenIds.get(w), id, width, depth-1, sink);
 		}
-		return docs;
+		return id-idoffset;
+  }
+  static SolrInputDocument folder(Integer id, String path, Integer parentId) {
+    return docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
+    "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
+    PathField, path, ParentField, parentId, "type_s", "folder");    
   }
   static SolrInputDocument docInFolder(Integer folderId) {
     return docOf(
@@ -63,13 +71,6 @@ class TestData {
       "link_folder_" + LongField, Long.valueOf(folderId+1),
       "type_s", "doc" );
   }
-	// generate 1 doc for each folder 
-	static List<SolrInputDocument> docsUnder(List<SolrInputDocument> folders) {
-		return folders.stream().map(folder-> {
-      Integer id = (Integer)folder.getFieldValue(IntField);
-			return docInFolder(id);
-    }).collect(Collectors.toList());
-  }  
 
 	public static SolrInputDocument docOf(Object... args) {
 		SolrInputDocument doc = new SolrInputDocument();

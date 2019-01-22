@@ -88,15 +88,17 @@ class JoinQstr {
       ));
     }
     FieldType toFieldType = toTypes.get(0);
-    final String fromIndex = r.fromIndex == null ? 
-      req.getCore().getCoreDescriptor().getCollectionName() : r.fromIndex;
     long fromCoreCommitTime = 0;
     Query q = null;
 
-    SolrCore fromCore = (req.getCore().getCoreDescriptor().getCollectionName().equalsIgnoreCase(fromIndex)) ? req.getCore()
-        : req.getCore().getCoreContainer().getCores().stream()
-            .filter((c) -> c.getCoreDescriptor().getCollectionName().equalsIgnoreCase(fromIndex)).findFirst().get();
+    SolrCore fromCore = r.fromIndex == null ? req.getCore() : 
+      req.getCore().getCoreContainer().getCores().stream()
+        .filter((c) -> c.getName().equalsIgnoreCase(r.fromIndex) || 
+          r.fromIndex.equalsIgnoreCase(c.getCoreDescriptor().getCollectionName())
+        ).findFirst().get();
 
+    String fromIndex = fromCore.getCoreDescriptor().getCollectionName() == null ? fromCore.getName() :
+      fromCore.getCoreDescriptor().getCollectionName() ;
     if (fromCore != req.getCore()) {
       RefCounted<SolrIndexSearcher> s = fromCore.getRegisteredSearcher();
       if (s != null) {

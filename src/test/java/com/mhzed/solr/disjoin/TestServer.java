@@ -87,11 +87,6 @@ public abstract class TestServer{
 	public void launch() throws Exception {
     Config c = config();
     this.server = exec(c);
-		// !!! For docker port mapping, this test always succeeds quickly as docker makes the mapped port available for connection
-    // immediately.  Work around is to run docker container in 'host' network mode, or override launch and check REST api call.
-    if (c.port != 0) {
-      waitForPort(1000, 2000, c.port, this.server); // if image is downloaded, could take a while
-    }
 	}
 
 	public void shutdown() throws Exception {

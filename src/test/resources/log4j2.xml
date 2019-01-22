@@ -23,5 +23,7 @@
     <Root level="error">
       <AppenderRef ref="Console" />
     </Root>
+    <Logger name="com.mhzed.solr.disjoin.DockerPerformanceTest" level="info">
+    </Logger>    
   </Loggers>
 </Configuration>
