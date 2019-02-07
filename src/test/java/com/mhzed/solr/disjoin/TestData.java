@@ -13,7 +13,8 @@ class TestData {
   static final String LongField = "id_l";	// for test join by long
   static final String DoubleField = "id_d";	// for test join by double
   static final String TextField = "id_t"; // for unsuported type test 
-	static final String ParentField = "parent_id_s";
+  static final String ParentField = "parent_id_s";
+  static final String ParentLongField = "parent_id_l";
 
   @FunctionalInterface
   interface DocSink {
@@ -53,7 +54,8 @@ class TestData {
   static SolrInputDocument folder(Integer id, String path, Integer parentId) {
     return docOf(IdField, String.valueOf(id), IntField, id, LongField, id, DoubleField, id, TextField, id,
     "id_ss", String.valueOf(id), IntField+'s', id, LongField+'s', id, DoubleField+'s', id,
-    PathField, path, PathStringField, path, ParentField, parentId, "type_s", "folder");    
+    PathField, path, PathStringField, path, ParentField, parentId, 
+    ParentLongField, parentId, "type_s", "folder");    
   }
   static SolrInputDocument docInFolder(Integer folderId) {
     return docOf(

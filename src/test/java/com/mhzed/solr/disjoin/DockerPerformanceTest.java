@@ -74,7 +74,9 @@ public class DockerPerformanceTest {
     report("PathToken: dis-join of 4 queries", r);
 
     runGraphQueryCompare("/root/0");
-    runGraphQueryCompare("/root/0/0");
+    runGraphQueryCompare("/root/1");
+    runGraphQueryCompare("/root/2");
+    runGraphQueryCompare("/root/3");
   }
   private void report(String line, QueryResponse r) {
     System.out.println(String.format("%s. Size %d took %dms", line, r.getResults().getNumFound(), r.getQTime()));
@@ -99,12 +101,12 @@ public class DockerPerformanceTest {
       String.format("{!graph from=%s to=%s}%s:\"%s\"", 
       TestData.ParentField, TestData.IdField, TestData.PathStringField, 
       ClientUtils.escapeQueryChars(path))));
-    report("Graph", r);
+    report("Graph(str)", r);
     r = dockerServer.getClient().query(TestDockerServer.FolderCore, new SolrQuery(
-      String.format("%s:\"%s\"", 
-      TestData.PathField, 
+      String.format("{!graph from=%s to=%s}%s:\"%s\"", 
+      TestData.ParentLongField, TestData.LongField, TestData.PathStringField, 
       ClientUtils.escapeQueryChars(path))));
-    report("Path", r);
+    report("Graph(int)", r);
   }
 
   QueryResponse query(SolrQuery q) throws SolrServerException, IOException {
