@@ -19,7 +19,7 @@ public class TestDockerServer extends TestServer {
   @Override
   public Config config() throws Exception {
     Config c = new Config(ContainerName, Arrays.asList("docker", "run", "--name", 
-      ContainerName, "-p", String.format("%d:8983", TestPort), "-t", "mhzed/solr-disjoin"));
+      ContainerName, "-p", String.format("%d:8983", TestPort), "-t", "solr:alpine"));
 		c.port = TestPort;
     return c;
   }
