@@ -2,7 +2,11 @@ package com.mhzed.solr.disjoin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrInputDocument;
 
 class TestData {
@@ -81,5 +85,34 @@ class TestData {
 		}
 		return doc;
 	}
+
+	public static SolrQuery disJoin(String mainQuery, String[] joinQueries) {
+    String qs = IntStream.range(0, joinQueries.length).mapToObj(i->
+      "should=" + ClientUtils.encodeLocalParamVal(joinQueries[i])).collect(Collectors.joining(" "));
+		return new SolrQuery(mainQuery).addFilterQuery(String.format(
+            "{!bool %s}", qs
+						)).setRows(0).setShowDebugInfo(true);
+  }
+	
+	public static String graphJoinQuery(
+			String fromCollection, String fromId, String toId,
+			String fromGraphField, String toGraphField, String qField, String id) {
+		return String.format(
+						"{!join fromIndex=%s from=%s to=%s}{!graph from=%s to=%s}%s:\"%s\"",
+						fromCollection, fromId, toId,
+						fromGraphField, toGraphField, qField, 
+						ClientUtils.escapeQueryChars(id));
+	}
+
+  
+	public static String pathJoinQuery(String fromCollection, String from, 
+  				String to, String qField, String path) {
+		return String.format("{!join fromIndex=%s from=%s to=%s}%s:\"%s\"",
+						fromCollection,
+			      from,
+			      to,
+			      qField, ClientUtils.escapeQueryChars(path)
+			    );  	
+  }
 
 }

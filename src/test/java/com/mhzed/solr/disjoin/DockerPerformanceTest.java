@@ -2,13 +2,11 @@ package com.mhzed.solr.disjoin;
 
 
 import java.io.IOException;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.UpdateRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
@@ -25,7 +23,8 @@ public class DockerPerformanceTest {
   public static final int BatchSize = 100000;
   public static int FolderWidth = 4;
   public static int FolderDepth = 11;   // about 5.6 million in total 
-	@BeforeClass
+
+  @BeforeClass
 	public static void setup() throws Exception {
     dockerServer = new TestDockerServer();
     dockerServer.launch();
@@ -65,11 +64,11 @@ public class DockerPerformanceTest {
     runPathJoinInt("/root/0/0/0/0/0/0/0/0/0/0");
 
     QueryResponse r;
-    r = query(disJoin("type_s:doc", new String[]{
-      pathDisJoinQuery("/root/0", "id", "folder_id_s"),
-      pathDisJoinQuery("/root/1", "id", "folder_id_s"),
-      pathDisJoinQuery("/root/2", "id", "folder_id_s"),
-      pathDisJoinQuery("/root/3", "id", "folder_id_s")
+    r = query(TestData.disJoin("type_s:doc", new String[]{
+      pathJoinQuery("/root/0", "id", "folder_id_s"),
+      pathJoinQuery("/root/1", "id", "folder_id_s"),
+      pathJoinQuery("/root/2", "id", "folder_id_s"),
+      pathJoinQuery("/root/3", "id", "folder_id_s")
     }));
     report("PathToken: dis-join of 4 queries", r);
 
@@ -83,15 +82,15 @@ public class DockerPerformanceTest {
   }
   public void runPathJoin(String path) throws SyntaxError, SolrServerException, IOException {
     QueryResponse r;
-    r = query(disJoin("type_s:doc", new String[]{
-      pathDisJoinQuery(path, "id", "folder_id_s")
+    r = query(TestData.disJoin("type_s:doc", new String[]{
+      pathJoinQuery(path, "id", "folder_id_s")
     }));
     report("PathToken(str)", r);
   }
   public void runPathJoinInt(String path) throws SyntaxError, SolrServerException, IOException {
     QueryResponse r;
-    r = query(disJoin("type_s:doc", new String[]{
-      pathDisJoinQuery(path, "id_l", "folder_id_l")
+    r = query(TestData.disJoin("type_s:doc", new String[]{
+      pathJoinQuery(path, "id_l", "folder_id_l")
     }));
     report("PathToken(int)", r);
   }
@@ -112,22 +111,14 @@ public class DockerPerformanceTest {
   QueryResponse query(SolrQuery q) throws SolrServerException, IOException {
     return dockerServer.getClient().query(TestDockerServer.FileCore, q);
   }
-	SolrQuery disJoin(String mainQuery, String[] disJoinQueries) {
-    String qs = IntStream.range(0, disJoinQueries.length).mapToObj(i->
-      "v" + (i==0?"":i) + "=" + ClientUtils.encodeLocalParamVal(disJoinQueries[i]))
-      .collect(Collectors.joining(" "));
-		return new SolrQuery(mainQuery).addFilterQuery(String.format(
-            "{!disjoin %s}", qs)).setRows(0).setShowDebugInfo(true);
-  }
+  
   SolrQuery join(String mainQuery, String joinQuery) {
 		return new SolrQuery(mainQuery).addFilterQuery(joinQuery).setRows(0).setShowDebugInfo(true);
   }
 
-  String pathDisJoinQuery(String path, String from, String to) {
-		return String.format("%s.%s|%s|%s:%s",
-      TestDockerServer.FolderCore, from, to,
-      TestData.PathField, ClientUtils.escapeQueryChars(path)
-    );
+  String pathJoinQuery(String path, String from, String to) {
+  	return TestData.pathJoinQuery(TestDockerServer.FolderCore, from, to, 
+  					TestData.PathField, path);
   }  
 
   private static int nextFolderId() throws SolrServerException, IOException {
